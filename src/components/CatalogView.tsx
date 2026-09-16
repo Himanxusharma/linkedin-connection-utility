@@ -115,7 +115,7 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
     const map = new Map<string, number>();
     companies.forEach((c) => {
       if (c.category) {
-        const primary = c.category.split('/')[0].trim();
+        const primary = c.category.trim();
         map.set(primary, (map.get(primary) || 0) + 1);
       }
     });
@@ -123,7 +123,23 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
   }, [companies]);
 
   const categories = useMemo(() => {
-    return ['All', ...Array.from(categoryCounts.keys()).sort()];
+    const priority = [
+      'All',
+      'Fintech & Payments',
+      'Banking & Neobanks',
+      'Enterprise SaaS',
+      'Big Tech',
+      'AI & Semiconductors',
+      'Cybersecurity & Infrastructure',
+      'E-Commerce & Consumer',
+      'Crypto & Web3',
+    ];
+    const present = Array.from(categoryCounts.keys());
+    const sorted = priority.filter((p) => p === 'All' || present.includes(p));
+    present.forEach((p) => {
+      if (!sorted.includes(p)) sorted.push(p);
+    });
+    return sorted;
   }, [categoryCounts]);
 
   // Current role keyword
@@ -137,7 +153,7 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
     const filtered = companies.filter((c) => {
       const matchesCategory =
         selectedCategory === 'All' ||
-        c.category.toLowerCase().includes(selectedCategory.toLowerCase());
+        c.category.toLowerCase() === selectedCategory.toLowerCase();
       const q = searchQuery.trim().toLowerCase();
       const matchesSearch =
         !q ||

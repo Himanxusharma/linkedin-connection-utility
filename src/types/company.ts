@@ -11,6 +11,7 @@ export interface CompanyRecord {
   name: string;
   slug: string;
   category: string;
+  subCategory?: string;
   linkedInUrl?: string;
   careersUrl?: string;
   website?: string;

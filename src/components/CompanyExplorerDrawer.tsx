@@ -176,10 +176,15 @@ export const CompanyExplorerDrawer: React.FC<CompanyExplorerDrawerProps> = ({
                   </span>
                 )}
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '2px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '2px', flexWrap: 'wrap' }}>
                 <span className="badge badge-category" style={{ fontSize: '0.7rem', padding: '0.15rem 0.5rem' }}>
                   {company.category}
                 </span>
+                {company.subCategory && company.subCategory !== company.category && (
+                  <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
+                    ({company.subCategory})
+                  </span>
+                )}
                 <code style={{ fontFamily: 'var(--font-mono)', color: '#38bdf8', fontSize: '0.75rem' }}>
                   {company.slug}
                 </code>
