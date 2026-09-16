@@ -24,19 +24,24 @@ import {
   FileCode,
   BriefcaseBusiness,
   Zap,
+  Bot,
 } from 'lucide-react';
 import Papa from 'papaparse';
 import { CompanyRecord, WorkspaceRow, VerificationStatus, OutreachStatus } from '../types/company';
 import {
   generateSlug,
+  extractSlugFromLinkedInUrl,
+  buildCleanCompanyUrl,
   buildPeopleUrl,
   buildJobsUrl,
   buildGoogleSearchUrl,
   TARGET_ROLE_OPTIONS,
+  KNOWN_COMPANY_SLUGS,
 } from '../lib/slug-heuristics';
 import { saveCompany } from '../lib/firebase';
 import { OutreachMessageModal } from './OutreachMessageModal';
 import { SpeedRunRunnerModal } from './SpeedRunRunnerModal';
+import { AIPromptGeneratorModal } from './AIPromptGeneratorModal';
 
 interface WorkspaceViewProps {
   companiesDb: CompanyRecord[];
@@ -76,6 +81,7 @@ export const WorkspaceView: React.FC<WorkspaceViewProps> = ({
 
   // Speed-Run Runner state
   const [isSpeedRunOpen, setIsSpeedRunOpen] = useState<boolean>(false);
+  const [isAiPromptModalOpen, setIsAiPromptModalOpen] = useState<boolean>(false);
   const [outreachMap, setOutreachMap] = useState<Record<string, OutreachStatus>>({});
 
   useEffect(() => {
@@ -115,33 +121,78 @@ export const WorkspaceView: React.FC<WorkspaceViewProps> = ({
     return map;
   }, [companiesDb]);
 
-  const processCompanyNames = (names: string[], roleKeyword: string = currentRoleKeyword): WorkspaceRow[] => {
-    return names
-      .map((name) => name.trim())
-      .filter((name) => name.length > 0)
-      .map((name, index) => {
-        const lower = name.toLowerCase();
-        const matched = dbLookup.get(lower);
+  interface ParsedCompanyItem {
+    name: string;
+    rawSlug?: string;
+    category?: string;
+    careersUrl?: string;
+    linkedInUrl?: string;
+  }
 
-        const slug = matched ? matched.slug : generateSlug(name);
-        const status: VerificationStatus = matched ? 'verified' : 'guess';
-        const category = matched ? matched.category : undefined;
-        const careersLink = matched ? matched.careersUrl : undefined;
+  const processCompanyItems = (items: ParsedCompanyItem[], roleKeyword: string = currentRoleKeyword): WorkspaceRow[] => {
+    return items
+      .map((item) => {
+        let name = item.name ? item.name.trim() : '';
+        let extractedSlug: string | null = null;
+
+        // If a direct slug was provided in CSV
+        if (item.rawSlug && item.rawSlug.trim()) {
+          extractedSlug = extractSlugFromLinkedInUrl(item.rawSlug) || item.rawSlug.trim().toLowerCase();
+        }
+
+        // If a full LinkedIn URL was provided (e.g. from ChatGPT or CSV)
+        if (!extractedSlug && item.linkedInUrl && item.linkedInUrl.trim()) {
+          extractedSlug = extractSlugFromLinkedInUrl(item.linkedInUrl);
+        }
+
+        // If the company name itself is a LinkedIn URL
+        if (!extractedSlug && name.includes('linkedin.com/company/')) {
+          extractedSlug = extractSlugFromLinkedInUrl(name);
+        }
+
+        // Check if name is a known alias in KNOWN_COMPANY_SLUGS (e.g. "CRED" -> "credapp")
+        if (!extractedSlug) {
+          extractedSlug = generateSlug(name);
+        }
+
+        // Lookup in verified database by lower name, raw slug, or extracted slug
+        const lowerName = name.toLowerCase();
+        const matched = dbLookup.get(lowerName) || (extractedSlug ? dbLookup.get(extractedSlug) : undefined);
+
+        const finalSlug = extractedSlug || (matched ? matched.slug : generateSlug(name));
+
+        // Clean display name
+        let finalName = matched ? matched.name : name;
+        if (!finalName || finalName.startsWith('http')) {
+          finalName = matched
+            ? matched.name
+            : finalSlug
+                .split('-')
+                .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+                .join(' ');
+        }
+
+        const isKnownSlug = Boolean(matched || KNOWN_COMPANY_SLUGS[lowerName] || KNOWN_COMPANY_SLUGS[finalSlug]);
+        const status: VerificationStatus =
+          isKnownSlug || Boolean(item.rawSlug || item.linkedInUrl) ? 'verified' : 'guess';
+        const category = item.category || (matched ? matched.category : undefined);
+        const careersLink = item.careersUrl || (matched ? matched.careersUrl : undefined);
 
         return {
-          id: `row-${Date.now()}-${index}-${slug}`,
-          companyName: matched ? matched.name : name,
-          slug,
+          id: `row-${Date.now()}-${Math.random().toString(36).substr(2, 5)}-${finalSlug}`,
+          companyName: finalName,
+          slug: finalSlug,
           status,
           category,
-          peopleLink: buildPeopleUrl(slug, roleKeyword),
-          jobsLink: buildJobsUrl(slug),
+          peopleLink: buildPeopleUrl(finalSlug, roleKeyword),
+          jobsLink: buildJobsUrl(finalSlug),
           careersLink,
-          searchUrl: buildGoogleSearchUrl(name),
-          isCustomSlug: false,
-          outreachStatus: 'to_contact',
+          searchUrl: buildGoogleSearchUrl(finalName),
+          isCustomSlug: Boolean(item.rawSlug),
+          outreachStatus: 'to_contact' as OutreachStatus,
         };
-      });
+      })
+      .filter((r) => r.slug.length > 0);
   };
 
   // If preloaded names are provided (e.g. from Catalog view), parse them
@@ -179,29 +230,58 @@ export const WorkspaceView: React.FC<WorkspaceViewProps> = ({
 
       if (parsed.data.length > 0 && parsed.meta.fields) {
         const fieldNames = parsed.meta.fields;
-        const targetField = fieldNames.find((f) =>
-          ['company', 'company name', 'name', 'organization'].includes(f.trim().toLowerCase())
-        );
+        const findField = (aliases: string[]) =>
+          fieldNames.find((f) => aliases.includes(f.trim().toLowerCase()));
 
-        if (targetField) {
-          const names = parsed.data
-            .map((r) => r[targetField])
-            .filter((n): n is string => Boolean(n));
-          setRows(processCompanyNames(names));
-          return;
-        }
+        const companyField =
+          findField(['company', 'company name', 'name', 'organization', 'title']) || fieldNames[0];
+        const slugField = findField(['slug', 'company slug', 'linkedin slug', 'identifier']);
+        const urlField = findField(['linkedin url', 'linkedin', 'url', 'link', 'profile', 'linkedin page']);
+        const categoryField = findField(['category', 'industry', 'sector', 'subcategory']);
+        const careersField = findField(['careers url', 'careers', 'career url', 'careers link', 'jobs url', 'portal']);
 
-        const firstCol = fieldNames[0];
-        const names = parsed.data
-          .map((r) => r[firstCol])
-          .filter((n): n is string => Boolean(n));
-        setRows(processCompanyNames(names));
+        const items: ParsedCompanyItem[] = parsed.data
+          .filter((r) => Boolean(r[companyField] || (urlField && r[urlField]) || (slugField && r[slugField])))
+          .map((r) => ({
+            name: (r[companyField] || '').trim(),
+            rawSlug: slugField ? (r[slugField] || '').trim() : undefined,
+            linkedInUrl: urlField ? (r[urlField] || '').trim() : undefined,
+            category: categoryField ? (r[categoryField] || '').trim() : undefined,
+            careersUrl: careersField ? (r[careersField] || '').trim() : undefined,
+          }));
+
+        setRows(processCompanyItems(items));
         return;
       }
     }
 
+    // Line-by-line fallback
     const lines = raw.split('\n');
-    setRows(processCompanyNames(lines));
+    const items: ParsedCompanyItem[] = lines
+      .map((l) => l.trim())
+      .filter((l) => l.length > 0)
+      .map((line) => {
+        // Check if line is CSV-like without header: e.g. "CRED, https://www.linkedin.com/company/credapp/"
+        if (line.includes(',') || line.includes('\t')) {
+          const parts = line.split(/[,\t]+/).map((p) => p.trim());
+          const nameCandidate = parts[0];
+          const secondCandidate = parts[1] || '';
+          const isSecondUrl = secondCandidate.includes('linkedin.com/company/');
+          return {
+            name: nameCandidate,
+            linkedInUrl: isSecondUrl ? secondCandidate : undefined,
+            rawSlug: !isSecondUrl && secondCandidate.length > 0 ? secondCandidate : undefined,
+            category: parts[2],
+          };
+        }
+
+        // Single value (name or URL)
+        return {
+          name: line,
+        };
+      });
+
+    setRows(processCompanyItems(items));
   };
 
   const handleFileUpload = (file: File) => {
@@ -461,21 +541,76 @@ export const WorkspaceView: React.FC<WorkspaceViewProps> = ({
             </p>
           </div>
 
-          {/* CSV File Upload button */}
-          <label className="btn btn-secondary" style={{ cursor: 'pointer' }}>
-            <FileUp size={16} color="#38bdf8" />
-            <span>Upload CSV File</span>
-            <input
-              type="file"
-              accept=".csv,text/csv"
-              onChange={(e) => {
-                const file = e.target.files?.[0];
-                if (file) handleFileUpload(file);
-                e.target.value = '';
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', flexWrap: 'wrap' }}>
+            {/* AI Prompt Generator Button */}
+            <button
+              type="button"
+              className="btn btn-primary"
+              onClick={() => setIsAiPromptModalOpen(true)}
+              style={{
+                background: 'linear-gradient(135deg, #10b981 0%, #06b6d4 100%)',
+                color: '#fff',
+                fontWeight: 700,
+                border: 'none',
+                boxShadow: '0 2px 14px rgba(6, 182, 212, 0.35)',
               }}
-              style={{ display: 'none' }}
-            />
-          </label>
+              title="Build an anti-hallucination prompt for ChatGPT, Claude, or Gemini to get custom company lists"
+            >
+              <Bot size={16} />
+              <span>Ask AI (ChatGPT / Claude / Gemini)</span>
+            </button>
+
+            {/* CSV File Upload button */}
+            <label className="btn btn-secondary" style={{ cursor: 'pointer' }}>
+              <FileUp size={16} color="#38bdf8" />
+              <span>Upload CSV File</span>
+              <input
+                type="file"
+                accept=".csv,text/csv"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) handleFileUpload(file);
+                  e.target.value = '';
+                }}
+                style={{ display: 'none' }}
+              />
+            </label>
+          </div>
+        </div>
+
+        {/* AI Prompt Callout Banner */}
+        <div
+          style={{
+            padding: '0.75rem 1.15rem',
+            borderRadius: 'var(--radius-md)',
+            backgroundColor: 'rgba(6, 182, 212, 0.08)',
+            border: '1px dashed rgba(6, 182, 212, 0.35)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '0.75rem',
+            flexWrap: 'wrap',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.8rem', color: '#67e8f9' }}>
+            <Bot size={16} color="#38bdf8" style={{ flexShrink: 0 }} />
+            <span>
+              <strong>Need target companies?</strong> Generate an anti-hallucination prompt with verified slugs (e.g. CRED=credapp, zero <code>?utm_source</code> params) for ChatGPT, Claude, or Gemini.
+            </span>
+          </div>
+          <button
+            type="button"
+            className="btn btn-secondary"
+            onClick={() => setIsAiPromptModalOpen(true)}
+            style={{
+              fontSize: '0.75rem',
+              padding: '0.35rem 0.8rem',
+              borderColor: 'rgba(6, 182, 212, 0.4)',
+              color: '#38bdf8',
+            }}
+          >
+            ✨ Generate Prompt with 1-Click Launch
+          </button>
         </div>
 
         {/* Textarea */}
@@ -893,6 +1028,18 @@ export const WorkspaceView: React.FC<WorkspaceViewProps> = ({
         onUpdateStatus={handleUpdateStatus}
         onNotify={onNotify}
         initialRoleId={selectedRoleId}
+      />
+
+      {/* AI Company List Prompt Generator Modal */}
+      <AIPromptGeneratorModal
+        isOpen={isAiPromptModalOpen}
+        onClose={() => setIsAiPromptModalOpen(false)}
+        onNotify={onNotify}
+        onLoadCsvIntoWorkspace={(csvText) => {
+          setInputText(csvText);
+          parseInput(csvText);
+          setIsAiPromptModalOpen(false);
+        }}
       />
     </div>
   );
