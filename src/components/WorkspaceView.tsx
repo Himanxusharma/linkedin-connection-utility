@@ -374,7 +374,7 @@ export const WorkspaceView: React.FC<WorkspaceViewProps> = ({
       <div
         className="glass-card"
         style={{
-          padding: '1rem 1.5rem',
+          padding: '1rem 1.25rem',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
@@ -384,7 +384,7 @@ export const WorkspaceView: React.FC<WorkspaceViewProps> = ({
           borderColor: 'rgba(99, 102, 241, 0.35)',
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', minWidth: '240px' }}>
           <div
             style={{
               width: '36px',
@@ -395,6 +395,7 @@ export const WorkspaceView: React.FC<WorkspaceViewProps> = ({
               alignItems: 'center',
               justifyContent: 'center',
               color: '#fff',
+              flexShrink: 0,
             }}
           >
             <BriefcaseBusiness size={18} />
@@ -618,19 +619,24 @@ export const WorkspaceView: React.FC<WorkspaceViewProps> = ({
         </div>
       )}
 
+      {/* Mobile Swipe Hint Banner */}
+      <div className="table-mobile-hint">
+        <span>👈 Swipe horizontally to view all columns & links 👉</span>
+      </div>
+
       {/* Results Table */}
       {rows.length > 0 && (
         <div className="table-container">
           <table className="data-table">
             <thead>
               <tr>
-                <th style={{ width: '50px', textAlign: 'center' }}>Verify</th>
-                <th>Company</th>
-                <th style={{ width: '220px' }}>Slug (Editable)</th>
-                <th>Status</th>
-                <th>People Link</th>
-                <th>Jobs Link</th>
-                <th style={{ width: '150px' }}>Actions</th>
+                <th style={{ width: '50px', minWidth: '50px', textAlign: 'center' }}>Verify</th>
+                <th style={{ minWidth: '160px' }}>Company</th>
+                <th style={{ width: '220px', minWidth: '180px' }}>Slug (Editable)</th>
+                <th style={{ minWidth: '110px' }}>Status</th>
+                <th style={{ minWidth: '140px' }}>People Link</th>
+                <th style={{ minWidth: '130px' }}>Jobs Link</th>
+                <th style={{ width: '150px', minWidth: '130px' }}>Actions</th>
               </tr>
             </thead>
             <tbody>

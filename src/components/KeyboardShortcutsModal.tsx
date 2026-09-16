@@ -75,13 +75,14 @@ export const KeyboardShortcutsModal: React.FC<KeyboardShortcutsModalProps> = ({
         padding: '1.25rem',
         animation: 'fadeIn 0.18s ease',
       }}
+      className="modal-overlay-responsive"
       onClick={onClose}
       role="dialog"
       aria-modal="true"
       aria-labelledby="shortcuts-modal-title"
     >
       <div
-        className="glass-card"
+        className="glass-card modal-dialog-responsive"
         style={{
           width: '100%',
           maxWidth: '680px',

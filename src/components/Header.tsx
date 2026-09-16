@@ -92,7 +92,7 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
 
           {/* Quick Metrics & Cloud Status */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+          <div className="header-metrics-wrap" style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', flexWrap: 'wrap' }}>
             <div
               style={{
                 display: 'flex',
@@ -149,7 +149,7 @@ export const Header: React.FC<HeaderProps> = ({
               ) : (
                 <>
                   <Database size={15} color="#f59e0b" />
-                  <span>Seed Mode (Offline Ready)</span>
+                  <span>Seed Mode</span>
                 </>
               )}
             </button>
@@ -180,16 +180,19 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
         </div>
 
-        {/* Tab Navigation */}
+        {/* Tab Navigation with Momentum Scroll on Mobile */}
         <div
           role="tablist"
           style={{
             display: 'flex',
             alignItems: 'center',
             gap: '0.5rem',
-            marginTop: '1.5rem',
+            marginTop: '1.25rem',
             borderBottom: '1px solid var(--border-subtle)',
             paddingBottom: '0.25rem',
+            overflowX: 'auto',
+            WebkitOverflowScrolling: 'touch',
+            scrollbarWidth: 'none',
           }}
         >
           <button
@@ -206,9 +209,11 @@ export const Header: React.FC<HeaderProps> = ({
               borderBottom: activeTab === 'catalog' ? '2px solid #6366f1' : '2px solid transparent',
               color: activeTab === 'catalog' ? '#ffffff' : 'var(--text-secondary)',
               fontWeight: 600,
-              fontSize: '0.9rem',
+              fontSize: '0.875rem',
               cursor: 'pointer',
               transition: 'all 0.15s ease',
+              whiteSpace: 'nowrap',
+              flexShrink: 0,
             }}
           >
             <Layers size={18} color={activeTab === 'catalog' ? '#6366f1' : 'var(--text-muted)'} />
@@ -241,9 +246,11 @@ export const Header: React.FC<HeaderProps> = ({
               borderBottom: activeTab === 'workspace' ? '2px solid #06b6d4' : '2px solid transparent',
               color: activeTab === 'workspace' ? '#ffffff' : 'var(--text-secondary)',
               fontWeight: 600,
-              fontSize: '0.9rem',
+              fontSize: '0.875rem',
               cursor: 'pointer',
               transition: 'all 0.15s ease',
+              whiteSpace: 'nowrap',
+              flexShrink: 0,
             }}
           >
             <FileSpreadsheet size={18} color={activeTab === 'workspace' ? '#06b6d4' : 'var(--text-muted)'} />

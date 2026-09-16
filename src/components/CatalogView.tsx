@@ -419,7 +419,7 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
       <div
         className="glass-card"
         style={{
-          padding: '1rem 1.5rem',
+          padding: '1rem 1.25rem',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
@@ -429,7 +429,7 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
           borderColor: 'rgba(99, 102, 241, 0.25)',
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap', flex: '1 1 auto' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
             <Target size={16} color="#38bdf8" />
             <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
@@ -437,7 +437,7 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
             </span>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap', fontSize: '0.8rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flexWrap: 'wrap', fontSize: '0.8rem' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#94a3b8' }}>
               <span>⚪ To Contact:</span>
               <strong style={{ color: '#f8fafc', fontFamily: 'var(--font-mono)' }}>{funnelMetrics.toContact}</strong>
@@ -466,10 +466,10 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
         </div>
 
         {/* Weekly Target Progress Gauge */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.875rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.875rem', flexShrink: 0 }}>
           <div style={{ textAlign: 'right' }}>
             <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#f8fafc' }}>
-              {funnelMetrics.totalOutreach} Reached • Weekly Goal 30
+              {funnelMetrics.totalOutreach} Reached • Goal 30
             </div>
             <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
               {Math.min(100, Math.round((funnelMetrics.totalOutreach / 30) * 100))}% Completed
@@ -477,7 +477,7 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
           </div>
           <div
             style={{
-              width: '80px',
+              width: '70px',
               height: '8px',
               backgroundColor: 'rgba(255, 255, 255, 0.08)',
               borderRadius: 'var(--radius-full)',
@@ -500,7 +500,7 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
       <div
         className="glass-card"
         style={{
-          padding: '1rem 1.5rem',
+          padding: '1rem 1.25rem',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
@@ -510,7 +510,7 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
           borderColor: 'rgba(99, 102, 241, 0.35)',
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', minWidth: '240px' }}>
           <div
             style={{
               width: '36px',
@@ -521,6 +521,7 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
               alignItems: 'center',
               justifyContent: 'center',
               color: '#fff',
+              flexShrink: 0,
             }}
           >
             <BriefcaseBusiness size={18} />
@@ -643,7 +644,7 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
           }}
         >
           {/* Search Input with Clear Button and ⌘K Hint */}
-          <div style={{ position: 'relative', flex: '1 1 320px', maxWidth: '480px' }}>
+          <div className="mobile-full-width" style={{ position: 'relative', flex: '1 1 320px', maxWidth: '480px' }}>
             <Search
               size={18}
               color="var(--text-muted)"
@@ -787,7 +788,17 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
         </div>
 
         {/* Category Filter Pills with Item Count Badges */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', overflowX: 'auto', paddingBottom: '6px' }}>
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem',
+            overflowX: 'auto',
+            paddingBottom: '6px',
+            WebkitOverflowScrolling: 'touch',
+            scrollbarWidth: 'none',
+          }}
+        >
           <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '5px', flexShrink: 0 }}>
             <Filter size={14} color="#818cf8" /> Categories:
           </span>
@@ -956,12 +967,17 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
         </div>
       )}
 
+      {/* Mobile Swipe Hint Banner */}
+      <div className="table-mobile-hint">
+        <span>👈 Swipe horizontally to view all columns & links 👉</span>
+      </div>
+
       {/* Main Companies Table */}
       <div className="table-container">
         <table className="data-table">
           <thead>
             <tr>
-              <th scope="col" style={{ width: '42px', textAlign: 'center' }}>
+              <th scope="col" style={{ width: '42px', minWidth: '42px', textAlign: 'center' }}>
                 <input
                   type="checkbox"
                   aria-label="Select all visible companies"
@@ -973,12 +989,12 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
                   style={{ cursor: 'pointer' }}
                 />
               </th>
-              <th scope="col" style={{ width: '36px', textAlign: 'center' }} title="Favorites / Starred">
+              <th scope="col" style={{ width: '36px', minWidth: '36px', textAlign: 'center' }} title="Favorites / Starred">
                 <Star size={13} color="#facc15" />
               </th>
               <th
                 scope="col"
-                style={{ width: '75px', cursor: 'pointer', userSelect: 'none' }}
+                style={{ width: '75px', minWidth: '75px', cursor: 'pointer', userSelect: 'none' }}
                 onClick={() => handleSort('rank')}
                 title="Sort by Rank"
                 aria-sort={sortField === 'rank' ? (sortOrder === 'asc' ? 'ascending' : 'descending') : 'none'}
@@ -994,7 +1010,7 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
               </th>
               <th
                 scope="col"
-                style={{ cursor: 'pointer', userSelect: 'none' }}
+                style={{ minWidth: '170px', cursor: 'pointer', userSelect: 'none' }}
                 onClick={() => handleSort('name')}
                 title="Sort by Company Name"
                 aria-sort={sortField === 'name' ? (sortOrder === 'asc' ? 'ascending' : 'descending') : 'none'}
@@ -1010,7 +1026,7 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
               </th>
               <th
                 scope="col"
-                style={{ cursor: 'pointer', userSelect: 'none' }}
+                style={{ minWidth: '150px', cursor: 'pointer', userSelect: 'none' }}
                 onClick={() => handleSort('category')}
                 title="Sort by Category"
                 aria-sort={sortField === 'category' ? (sortOrder === 'asc' ? 'ascending' : 'descending') : 'none'}
@@ -1024,10 +1040,10 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
                   )}
                 </div>
               </th>
-              <th scope="col" style={{ width: '150px' }}>Outreach Tracker</th>
-              <th scope="col">Target People Page</th>
-              <th scope="col">Jobs Page</th>
-              <th scope="col">Careers Portal</th>
+              <th scope="col" style={{ width: '150px', minWidth: '145px' }}>Outreach Tracker</th>
+              <th scope="col" style={{ minWidth: '140px' }}>Target People Page</th>
+              <th scope="col" style={{ minWidth: '130px' }}>Jobs Page</th>
+              <th scope="col" style={{ minWidth: '120px' }}>Careers Portal</th>
             </tr>
           </thead>
           <tbody>

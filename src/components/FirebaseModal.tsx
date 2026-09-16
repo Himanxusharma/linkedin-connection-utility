@@ -52,10 +52,11 @@ NEXT_PUBLIC_FIREBASE_APP_ID=your-app-id`;
         justifyContent: 'center',
         padding: '1.5rem',
       }}
+      className="modal-overlay-responsive"
       onClick={onClose}
     >
       <div
-        className="glass-card"
+        className="glass-card modal-dialog-responsive"
         style={{
           width: '100%',
           maxWidth: '620px',

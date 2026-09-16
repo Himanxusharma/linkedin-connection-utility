@@ -271,10 +271,11 @@ export const SpeedRunRunnerModal: React.FC<SpeedRunRunnerModalProps> = ({
         padding: '1.25rem',
         animation: 'fadeIn 0.2s ease',
       }}
+      className="modal-overlay-responsive"
       onClick={onClose}
     >
       <div
-        className="glass-card"
+        className="glass-card modal-dialog-responsive"
         style={{
           width: '100%',
           maxWidth: '860px',
@@ -292,7 +293,7 @@ export const SpeedRunRunnerModal: React.FC<SpeedRunRunnerModalProps> = ({
         {/* Top Speed-Run Banner & Progress Bar */}
         <div
           style={{
-            padding: '1.25rem 1.75rem',
+            padding: '1rem 1.25rem',
             borderBottom: '1px solid var(--border-subtle)',
             background: 'linear-gradient(90deg, rgba(30, 27, 75, 0.9) 0%, rgba(15, 23, 42, 0.95) 100%)',
             display: 'flex',
@@ -357,7 +358,7 @@ export const SpeedRunRunnerModal: React.FC<SpeedRunRunnerModalProps> = ({
               <span style={{ color: '#a5b4fc', fontWeight: 700 }}>
                 Target {currentIndex + 1} of {companies.length} ({progressPct}%)
               </span>
-              <span style={{ color: 'var(--text-muted)' }}>
+              <span className="mobile-hide" style={{ color: 'var(--text-muted)' }}>
                 Hotkeys: <kbd style={{ background: 'rgba(255,255,255,0.1)', padding: '1px 5px', borderRadius: '3px' }}>Space</kbd> Open & Copy • <kbd style={{ background: 'rgba(255,255,255,0.1)', padding: '1px 5px', borderRadius: '3px' }}>1-3</kbd> Tag Status • <kbd style={{ background: 'rgba(255,255,255,0.1)', padding: '1px 5px', borderRadius: '3px' }}>N</kbd> Next
               </span>
             </div>
@@ -495,8 +496,8 @@ export const SpeedRunRunnerModal: React.FC<SpeedRunRunnerModalProps> = ({
           <div
             style={{
               display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
-              gap: '1rem',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))',
+              gap: '0.875rem',
             }}
           >
             {/* Target Role Selector */}
@@ -758,7 +759,7 @@ export const SpeedRunRunnerModal: React.FC<SpeedRunRunnerModalProps> = ({
               </span>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '0.5rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(105px, 1fr))', gap: '0.5rem' }}>
               <button
                 onClick={() => handleTagStatus('contacted')}
                 className="btn"
@@ -849,7 +850,7 @@ export const SpeedRunRunnerModal: React.FC<SpeedRunRunnerModalProps> = ({
             <span>Previous [P]</span>
           </button>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+          <div className="mobile-hide" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
             <Keyboard size={14} color="#818cf8" />
             <span>Arrow Keys, Spacebar, & 1-3 keys are active</span>
           </div>

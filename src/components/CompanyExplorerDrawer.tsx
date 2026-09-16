@@ -123,7 +123,7 @@ export const CompanyExplorerDrawer: React.FC<CompanyExplorerDrawerProps> = ({
       onClick={onClose}
     >
       <div
-        className="glass-card"
+        className="glass-card drawer-responsive"
         style={{
           width: '100%',
           maxWidth: '780px',
@@ -262,10 +262,12 @@ export const CompanyExplorerDrawer: React.FC<CompanyExplorerDrawerProps> = ({
             display: 'flex',
             alignItems: 'center',
             gap: '0.5rem',
-            padding: '0.75rem 1.5rem',
+            padding: '0.75rem 1.25rem',
             borderBottom: '1px solid var(--border-subtle)',
             backgroundColor: 'rgba(11, 17, 32, 0.95)',
             overflowX: 'auto',
+            WebkitOverflowScrolling: 'touch',
+            scrollbarWidth: 'none',
           }}
         >
           <button
@@ -453,7 +455,7 @@ export const CompanyExplorerDrawer: React.FC<CompanyExplorerDrawerProps> = ({
                   Quick Launchpad for {company.name}
                 </h3>
 
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1rem' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1rem' }}>
                   {/* People Card */}
                   <div
                     style={{

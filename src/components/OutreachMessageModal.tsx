@@ -112,10 +112,11 @@ export const OutreachMessageModal: React.FC<OutreachMessageModalProps> = ({
         justifyContent: 'center',
         padding: '1.5rem',
       }}
+      className="modal-overlay-responsive"
       onClick={onClose}
     >
       <div
-        className="glass-card"
+        className="glass-card modal-dialog-responsive"
         style={{
           width: '100%',
           maxWidth: '640px',
