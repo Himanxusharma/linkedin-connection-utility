@@ -79,10 +79,68 @@ body {
   background: rgba(99, 102, 241, 0.65);
 }
 
-/* Focus Visible for Accessibility */
+/* Focus Visible for Accessibility (WCAG 2.4.7) */
 :focus-visible {
-  outline: 2px solid var(--accent-primary);
-  outline-offset: 2px;
+  outline: 2px solid #38bdf8 !important;
+  outline-offset: 3px !important;
+  border-radius: inherit;
+}
+
+/* Skip to Main Content Link (WCAG 2.4.1) */
+.skip-link {
+  position: absolute;
+  top: -100px;
+  left: 1.5rem;
+  background: #6366f1;
+  color: #ffffff;
+  padding: 0.6rem 1.2rem;
+  border-radius: var(--radius-md);
+  font-weight: 700;
+  font-size: 0.875rem;
+  z-index: 9999;
+  text-decoration: none;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+  transition: top 0.2s ease;
+}
+
+.skip-link:focus {
+  top: 1rem;
+}
+
+/* Screen Reader Only Utility */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+/* Star Bookmark Toggle */
+.star-btn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: var(--radius-xs);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.15s ease, color 0.15s ease;
+  color: var(--text-muted);
+}
+
+.star-btn:hover {
+  transform: scale(1.18);
+  color: #facc15;
+}
+
+.star-btn.starred {
+  color: #facc15;
 }
 
 /* Base Utility Classes */

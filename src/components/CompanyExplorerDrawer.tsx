@@ -16,6 +16,8 @@ import {
   Maximize2,
   RefreshCw,
   Info,
+  Star,
+  FileText,
 } from 'lucide-react';
 import { CompanyRecord } from '../types/company';
 import { buildPeopleUrl, buildJobsUrl, buildGoogleSearchUrl } from '../lib/slug-heuristics';
@@ -25,6 +27,10 @@ interface CompanyExplorerDrawerProps {
   isOpen: boolean;
   onClose: () => void;
   onNotify: (msg: string) => void;
+  isStarred?: boolean;
+  onToggleStar?: () => void;
+  notes?: string;
+  onSaveNotes?: (notes: string) => void;
 }
 
 type TabType = 'people' | 'jobs' | 'careers' | 'iframe';
@@ -34,17 +40,23 @@ export const CompanyExplorerDrawer: React.FC<CompanyExplorerDrawerProps> = ({
   isOpen,
   onClose,
   onNotify,
+  isStarred = false,
+  onToggleStar,
+  notes = '',
+  onSaveNotes,
 }) => {
   const [activeTab, setActiveTab] = useState<TabType>('people');
   const [copiedUrl, setCopiedUrl] = useState<boolean>(false);
   const [iframeKey, setIframeKey] = useState<number>(0);
+  const [localNotes, setLocalNotes] = useState<string>(notes);
 
   useEffect(() => {
     if (company) {
       setActiveTab('people');
       setIframeKey((k) => k + 1);
+      setLocalNotes(notes || '');
     }
-  }, [company]);
+  }, [company, notes]);
 
   if (!isOpen || !company) return null;
 
@@ -193,6 +205,27 @@ export const CompanyExplorerDrawer: React.FC<CompanyExplorerDrawerProps> = ({
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            {onToggleStar && (
+              <button
+                className={`star-btn ${isStarred ? 'starred' : ''}`}
+                onClick={onToggleStar}
+                aria-label={isStarred ? `Unstar ${company.name}` : `Star ${company.name}`}
+                title={isStarred ? 'Starred (Click to remove)' : 'Add to Starred'}
+                style={{
+                  width: '32px',
+                  height: '32px',
+                  borderRadius: '8px',
+                  border: '1px solid var(--border-subtle)',
+                  backgroundColor: isStarred ? 'rgba(250, 204, 21, 0.15)' : 'rgba(255, 255, 255, 0.05)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <Star size={16} fill={isStarred ? '#facc15' : 'transparent'} color={isStarred ? '#facc15' : 'var(--text-muted)'} />
+              </button>
+            )}
+
             <button
               onClick={() => openCompanionWindow(activeUrl)}
               className="btn btn-secondary"
@@ -374,6 +407,37 @@ export const CompanyExplorerDrawer: React.FC<CompanyExplorerDrawerProps> = ({
           ) : (
             /* Quick Dossier & Launchpad */
             <div style={{ padding: '2rem 1.5rem', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+              {/* Private Notes & Scratchpad */}
+              <div
+                className="glass-card"
+                style={{
+                  padding: '1.25rem',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '0.625rem',
+                  backgroundColor: 'rgba(15, 23, 42, 0.8)',
+                  border: '1px solid rgba(251, 191, 36, 0.35)',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 700, color: '#fde047', fontSize: '0.875rem' }}>
+                    <FileText size={15} /> Private Notes & Outreach Context
+                  </div>
+                  <span style={{ fontSize: '0.725rem', color: 'var(--text-muted)' }}>Auto-saves to browser</span>
+                </div>
+                <textarea
+                  className="input-field"
+                  rows={3}
+                  placeholder="Add private notes (e.g. Referred by Sarah; Applied via Workday #8192; Follow-up next Tuesday)..."
+                  value={localNotes}
+                  onChange={(e) => {
+                    setLocalNotes(e.target.value);
+                    if (onSaveNotes) onSaveNotes(e.target.value);
+                  }}
+                  style={{ fontSize: '0.825rem', lineHeight: '1.45', backgroundColor: 'rgba(10, 15, 26, 0.95)' }}
+                />
+              </div>
+
               <div
                 className="glass-card"
                 style={{

@@ -27,6 +27,10 @@ import {
   FileCode,
   Layers3,
   Zap,
+  Star,
+  FileText,
+  Plus,
+  Target,
 } from 'lucide-react';
 import Papa from 'papaparse';
 import { CompanyRecord, OutreachStatus } from '../types/company';
@@ -44,6 +48,10 @@ interface CatalogViewProps {
   onNotify: (msg: string) => void;
   onSendToWorkspace: (companyNames: string[]) => void;
   onExploreCompany?: (company: CompanyRecord) => void;
+  starredSet?: Set<string>;
+  onToggleStar?: (companyKey: string) => void;
+  notesMap?: Record<string, string>;
+  onUpdateNotes?: (companyKey: string, noteText: string) => void;
 }
 
 type SortField = 'rank' | 'name' | 'category' | 'status';
@@ -54,6 +62,10 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
   onNotify,
   onSendToWorkspace,
   onExploreCompany,
+  starredSet,
+  onToggleStar,
+  notesMap,
+  onUpdateNotes,
 }) => {
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -62,6 +74,12 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
 
   // Target role filter state
   const [selectedRoleId, setSelectedRoleId] = useState<string>('all');
+  const [customRoleInput, setCustomRoleInput] = useState<string>('');
+  const [customRoleOptions, setCustomRoleOptions] = useState<string[]>([]);
+  const [isAddingCustomRole, setIsAddingCustomRole] = useState<boolean>(false);
+
+  // Starred filter state
+  const [showStarredOnly, setShowStarredOnly] = useState<boolean>(false);
 
   // Outreach status state (persisted in localStorage)
   const [outreachMap, setOutreachMap] = useState<Record<string, OutreachStatus>>({});
@@ -81,17 +99,52 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
 
   const searchInputRef = React.useRef<HTMLInputElement>(null);
 
-  // Load outreach statuses from localStorage
+  // Load outreach statuses & custom roles from localStorage
   useEffect(() => {
     try {
       const saved = localStorage.getItem('linkbuilder_outreach_status');
-      if (saved) {
-        setOutreachMap(JSON.parse(saved));
-      }
+      if (saved) setOutreachMap(JSON.parse(saved));
+
+      const savedRoles = localStorage.getItem('linkbuilder_custom_roles');
+      if (savedRoles) setCustomRoleOptions(JSON.parse(savedRoles));
     } catch {
       // ignore
     }
   }, []);
+
+  const handleAddCustomRole = (e: React.FormEvent) => {
+    e.preventDefault();
+    const trimmed = customRoleInput.trim();
+    if (!trimmed) return;
+    const nextRoles = Array.from(new Set([...customRoleOptions, trimmed]));
+    setCustomRoleOptions(nextRoles);
+    try {
+      localStorage.setItem('linkbuilder_custom_roles', JSON.stringify(nextRoles));
+    } catch {}
+    setSelectedRoleId(`custom:${trimmed}`);
+    setCustomRoleInput('');
+    setIsAddingCustomRole(false);
+    onNotify(`Target role set to custom: "${trimmed}"`);
+  };
+
+  // Funnel analytics
+  const funnelMetrics = useMemo(() => {
+    let toContact = 0;
+    let reviewed = 0;
+    let contacted = 0;
+    let applied = 0;
+    let connected = 0;
+    companies.forEach((c) => {
+      const st = outreachMap[c.slug || c.name] || 'to_contact';
+      if (st === 'reviewed') reviewed++;
+      else if (st === 'contacted') contacted++;
+      else if (st === 'applied') applied++;
+      else if (st === 'connected') connected++;
+      else toContact++;
+    });
+    const totalOutreach = contacted + applied + connected;
+    return { toContact, reviewed, contacted, applied, connected, totalOutreach };
+  }, [companies, outreachMap]);
 
   const handleUpdateStatus = (companyKey: string, status: OutreachStatus) => {
     const next = { ...outreachMap, [companyKey]: status };
@@ -142,6 +195,9 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
 
   // Current role keyword
   const currentRoleKeyword = useMemo(() => {
+    if (selectedRoleId.startsWith('custom:')) {
+      return selectedRoleId.replace('custom:', '');
+    }
     const opt = TARGET_ROLE_OPTIONS.find((r) => r.id === selectedRoleId);
     return opt ? opt.keyword : '';
   }, [selectedRoleId]);
@@ -149,6 +205,11 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
   // Filtering & Sorting
   const filteredCompanies = useMemo(() => {
     const filtered = companies.filter((c) => {
+      const compKey = c.slug || c.name;
+      if (showStarredOnly && (!starredSet || !starredSet.has(compKey))) {
+        return false;
+      }
+
       const matchesCategory =
         selectedCategory === 'All' ||
         c.category.toLowerCase() === selectedCategory.toLowerCase();
@@ -159,7 +220,7 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
         c.slug.toLowerCase().includes(q) ||
         c.category.toLowerCase().includes(q);
 
-      const status = outreachMap[c.slug || c.name] || 'to_contact';
+      const status = outreachMap[compKey] || 'to_contact';
       const matchesStatus =
         selectedStatusFilter === 'all' || status === selectedStatusFilter;
 
@@ -261,17 +322,22 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
   };
 
   const exportFilteredCsv = (recordsToExport: CompanyRecord[]) => {
-    const rows = recordsToExport.map((c) => ({
-      Rank: c.rank || '',
-      Company: c.name,
-      Category: c.category,
-      Slug: c.slug,
-      'Outreach Status': (outreachMap[c.slug || c.name] || 'to_contact').replace('_', ' '),
-      'People Link': buildPeopleUrl(c.slug, currentRoleKeyword),
-      'Jobs Link': buildJobsUrl(c.slug),
-      'Careers Link': c.careersUrl || '',
-      'LinkedIn URL': c.linkedInUrl || '',
-    }));
+    const rows = recordsToExport.map((c) => {
+      const compKey = c.slug || c.name;
+      return {
+        Rank: c.rank || '',
+        Company: c.name,
+        Starred: starredSet && starredSet.has(compKey) ? 'Yes' : 'No',
+        Category: c.category,
+        Slug: c.slug,
+        'Outreach Status': (outreachMap[compKey] || 'to_contact').replace('_', ' '),
+        'Private Notes': notesMap ? notesMap[compKey] || '' : '',
+        'People Link': buildPeopleUrl(c.slug, currentRoleKeyword),
+        'Jobs Link': buildJobsUrl(c.slug),
+        'Careers Link': c.careersUrl || '',
+        'LinkedIn URL': c.linkedInUrl || '',
+      };
+    });
 
     const csv = Papa.unparse(rows);
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
@@ -285,17 +351,22 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
   };
 
   const copyAsGoogleSheetsTsv = async (records: CompanyRecord[]) => {
-    const headers = ['Rank', 'Company', 'Category', 'Slug', 'Status', 'People Link', 'Jobs Link', 'Careers'];
-    const lines = records.map((c) => [
-      c.rank || '',
-      c.name,
-      c.category,
-      c.slug,
-      outreachMap[c.slug || c.name] || 'to_contact',
-      buildPeopleUrl(c.slug, currentRoleKeyword),
-      buildJobsUrl(c.slug),
-      c.careersUrl || '',
-    ].join('\t'));
+    const headers = ['Rank', 'Company', 'Starred', 'Category', 'Slug', 'Status', 'Notes', 'People Link', 'Jobs Link', 'Careers'];
+    const lines = records.map((c) => {
+      const compKey = c.slug || c.name;
+      return [
+        c.rank || '',
+        c.name,
+        starredSet && starredSet.has(compKey) ? '★' : '',
+        c.category,
+        c.slug,
+        outreachMap[compKey] || 'to_contact',
+        notesMap ? notesMap[compKey] || '' : '',
+        buildPeopleUrl(c.slug, currentRoleKeyword),
+        buildJobsUrl(c.slug),
+        c.careersUrl || '',
+      ].join('\t');
+    });
     const tsv = [headers.join('\t'), ...lines].join('\n');
     await copyToClipboard(tsv, `${records.length} rows for Google Sheets (TSV)`, 'tsv-export');
   };
@@ -344,6 +415,87 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+      {/* Visual Outreach Pipeline Funnel & Weekly Goals */}
+      <div
+        className="glass-card"
+        style={{
+          padding: '1rem 1.5rem',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: '1rem',
+          background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.95) 0%, rgba(30, 27, 75, 0.65) 100%)',
+          borderColor: 'rgba(99, 102, 241, 0.25)',
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <Target size={16} color="#38bdf8" />
+            <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              Pipeline Funnel:
+            </span>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap', fontSize: '0.8rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#94a3b8' }}>
+              <span>⚪ To Contact:</span>
+              <strong style={{ color: '#f8fafc', fontFamily: 'var(--font-mono)' }}>{funnelMetrics.toContact}</strong>
+            </div>
+            <span style={{ color: 'var(--border-subtle)' }}>→</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#93c5fd' }}>
+              <span>🔵 Reviewed:</span>
+              <strong style={{ color: '#bfdbfe', fontFamily: 'var(--font-mono)' }}>{funnelMetrics.reviewed}</strong>
+            </div>
+            <span style={{ color: 'var(--border-subtle)' }}>→</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#facc15' }}>
+              <span>🟡 Contacted:</span>
+              <strong style={{ color: '#fef08a', fontFamily: 'var(--font-mono)' }}>{funnelMetrics.contacted}</strong>
+            </div>
+            <span style={{ color: 'var(--border-subtle)' }}>→</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#c084fc' }}>
+              <span>🟣 Applied:</span>
+              <strong style={{ color: '#e9d5ff', fontFamily: 'var(--font-mono)' }}>{funnelMetrics.applied}</strong>
+            </div>
+            <span style={{ color: 'var(--border-subtle)' }}>→</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#34d399' }}>
+              <span>🟢 Connected:</span>
+              <strong style={{ color: '#a7f3d0', fontFamily: 'var(--font-mono)' }}>{funnelMetrics.connected}</strong>
+            </div>
+          </div>
+        </div>
+
+        {/* Weekly Target Progress Gauge */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.875rem' }}>
+          <div style={{ textAlign: 'right' }}>
+            <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#f8fafc' }}>
+              {funnelMetrics.totalOutreach} Reached • Weekly Goal 30
+            </div>
+            <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
+              {Math.min(100, Math.round((funnelMetrics.totalOutreach / 30) * 100))}% Completed
+            </div>
+          </div>
+          <div
+            style={{
+              width: '80px',
+              height: '8px',
+              backgroundColor: 'rgba(255, 255, 255, 0.08)',
+              borderRadius: 'var(--radius-full)',
+              overflow: 'hidden',
+            }}
+          >
+            <div
+              style={{
+                width: `${Math.min(100, Math.round((funnelMetrics.totalOutreach / 30) * 100))}%`,
+                height: '100%',
+                background: 'linear-gradient(90deg, #6366f1 0%, #10b981 100%)',
+                borderRadius: 'var(--radius-full)',
+              }}
+            />
+          </div>
+        </div>
+      </div>
+
       {/* Target Role Selector Banner */}
       <div
         className="glass-card"
@@ -404,6 +556,70 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
               </button>
             );
           })}
+
+          {/* User Custom Roles */}
+          {customRoleOptions.map((cRole) => {
+            const active = selectedRoleId === `custom:${cRole}`;
+            return (
+              <button
+                key={cRole}
+                onClick={() => {
+                  setSelectedRoleId(`custom:${cRole}`);
+                  onNotify(`Target role set to: ${cRole}`);
+                }}
+                className={`btn ${active ? 'btn-primary' : 'btn-secondary'}`}
+                style={{
+                  padding: '0.35rem 0.75rem',
+                  fontSize: '0.775rem',
+                  borderRadius: 'var(--radius-full)',
+                  borderColor: active ? 'var(--accent-cyan)' : 'rgba(6, 182, 212, 0.3)',
+                  color: active ? '#fff' : '#67e8f9',
+                }}
+              >
+                {cRole}
+              </button>
+            );
+          })}
+
+          {/* Inline + Custom Role Form */}
+          {isAddingCustomRole ? (
+            <form onSubmit={handleAddCustomRole} style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <input
+                type="text"
+                className="input-field"
+                placeholder="e.g. Data Scientist, UX..."
+                value={customRoleInput}
+                onChange={(e) => setCustomRoleInput(e.target.value)}
+                autoFocus
+                style={{ width: '170px', padding: '0.25rem 0.5rem', fontSize: '0.75rem' }}
+              />
+              <button type="submit" className="btn btn-primary" style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem' }}>
+                Add
+              </button>
+              <button
+                type="button"
+                className="btn btn-outline"
+                onClick={() => setIsAddingCustomRole(false)}
+                style={{ padding: '0.25rem 0.4rem', fontSize: '0.75rem' }}
+              >
+                <X size={12} />
+              </button>
+            </form>
+          ) : (
+            <button
+              onClick={() => setIsAddingCustomRole(true)}
+              className="btn btn-outline"
+              style={{
+                padding: '0.35rem 0.65rem',
+                fontSize: '0.75rem',
+                borderRadius: 'var(--radius-full)',
+                borderStyle: 'dashed',
+              }}
+              title="Add a custom target title or specialty"
+            >
+              <Plus size={12} /> Add Role
+            </button>
+          )}
         </div>
       </div>
 
@@ -575,6 +791,45 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
           <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '5px', flexShrink: 0 }}>
             <Filter size={14} color="#818cf8" /> Categories:
           </span>
+
+          {/* ⭐ Starred Filter Pill */}
+          <button
+            onClick={() => setShowStarredOnly(!showStarredOnly)}
+            style={{
+              background: showStarredOnly ? 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)' : 'rgba(30, 41, 59, 0.7)',
+              color: showStarredOnly ? '#000000' : (starredSet && starredSet.size > 0 ? '#fbbf24' : 'var(--text-secondary)'),
+              border: showStarredOnly ? '1px solid #facc15' : '1px solid rgba(245, 158, 11, 0.35)',
+              borderRadius: 'var(--radius-full)',
+              padding: '0.35rem 0.8rem',
+              fontSize: '0.775rem',
+              fontWeight: 700,
+              cursor: 'pointer',
+              whiteSpace: 'nowrap',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              transition: 'all 0.18s ease',
+              boxShadow: showStarredOnly ? '0 2px 10px rgba(245, 158, 11, 0.4)' : 'none',
+              flexShrink: 0,
+            }}
+            title="Filter by your starred / bookmarked companies"
+            aria-pressed={showStarredOnly}
+          >
+            <Star size={13} fill={showStarredOnly || (starredSet && starredSet.size > 0) ? '#facc15' : 'transparent'} />
+            <span>Starred</span>
+            <span
+              style={{
+                fontSize: '0.7rem',
+                background: showStarredOnly ? 'rgba(0, 0, 0, 0.2)' : 'rgba(255, 255, 255, 0.08)',
+                color: showStarredOnly ? '#000' : 'var(--text-muted)',
+                padding: '0.1rem 0.4rem',
+                borderRadius: 'var(--radius-full)',
+                fontFamily: 'var(--font-mono)',
+              }}
+            >
+              {starredSet ? starredSet.size : 0}
+            </span>
+          </button>
           {categories.map((cat) => {
             const count = cat === 'All' ? companies.length : categoryCounts.get(cat) || 0;
             const isSelected = selectedCategory === cat;
@@ -706,7 +961,7 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
         <table className="data-table">
           <thead>
             <tr>
-              <th style={{ width: '42px', textAlign: 'center' }}>
+              <th scope="col" style={{ width: '42px', textAlign: 'center' }}>
                 <input
                   type="checkbox"
                   aria-label="Select all visible companies"
@@ -718,10 +973,15 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
                   style={{ cursor: 'pointer' }}
                 />
               </th>
+              <th scope="col" style={{ width: '36px', textAlign: 'center' }} title="Favorites / Starred">
+                <Star size={13} color="#facc15" />
+              </th>
               <th
+                scope="col"
                 style={{ width: '75px', cursor: 'pointer', userSelect: 'none' }}
                 onClick={() => handleSort('rank')}
                 title="Sort by Rank"
+                aria-sort={sortField === 'rank' ? (sortOrder === 'asc' ? 'ascending' : 'descending') : 'none'}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                   Rank
@@ -733,9 +993,11 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
                 </div>
               </th>
               <th
+                scope="col"
                 style={{ cursor: 'pointer', userSelect: 'none' }}
                 onClick={() => handleSort('name')}
                 title="Sort by Company Name"
+                aria-sort={sortField === 'name' ? (sortOrder === 'asc' ? 'ascending' : 'descending') : 'none'}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                   Company
@@ -747,9 +1009,11 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
                 </div>
               </th>
               <th
+                scope="col"
                 style={{ cursor: 'pointer', userSelect: 'none' }}
                 onClick={() => handleSort('category')}
                 title="Sort by Category"
+                aria-sort={sortField === 'category' ? (sortOrder === 'asc' ? 'ascending' : 'descending') : 'none'}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                   Category
@@ -760,16 +1024,16 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
                   )}
                 </div>
               </th>
-              <th style={{ width: '150px' }}>Outreach Tracker</th>
-              <th>Target People Page</th>
-              <th>Jobs Page</th>
-              <th>Careers Portal</th>
+              <th scope="col" style={{ width: '150px' }}>Outreach Tracker</th>
+              <th scope="col">Target People Page</th>
+              <th scope="col">Jobs Page</th>
+              <th scope="col">Careers Portal</th>
             </tr>
           </thead>
           <tbody>
             {filteredCompanies.length === 0 ? (
               <tr>
-                <td colSpan={8} style={{ textAlign: 'center', padding: '4rem 1rem' }}>
+                <td colSpan={9} style={{ textAlign: 'center', padding: '4rem 1rem' }}>
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.75rem' }}>
                     <Search size={32} color="var(--text-muted)" />
                     <div style={{ fontWeight: 700, fontSize: '1rem', color: 'var(--text-primary)' }}>
@@ -824,14 +1088,50 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
                         style={{ cursor: 'pointer' }}
                       />
                     </td>
+                    <td style={{ textAlign: 'center', width: '36px' }}>
+                      <button
+                        className={`star-btn ${starredSet && starredSet.has(companyKey) ? 'starred' : ''}`}
+                        onClick={() => onToggleStar && onToggleStar(companyKey)}
+                        aria-label={starredSet && starredSet.has(companyKey) ? `Remove ${c.name} from starred` : `Star ${c.name}`}
+                        title={starredSet && starredSet.has(companyKey) ? 'Starred' : 'Add to Starred'}
+                      >
+                        <Star
+                          size={15}
+                          fill={starredSet && starredSet.has(companyKey) ? '#facc15' : 'transparent'}
+                          color={starredSet && starredSet.has(companyKey) ? '#facc15' : 'var(--text-muted)'}
+                        />
+                      </button>
+                    </td>
                     <td style={{ fontWeight: 600, color: 'var(--text-muted)', fontFamily: 'var(--font-mono)', fontSize: '0.8rem' }}>
                       {c.rank ? `#${c.rank}` : '—'}
                     </td>
                     <td>
                       <div style={{ display: 'flex', flexDirection: 'column' }}>
-                        <span style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: '0.925rem' }}>
-                          {c.name}
-                        </span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <span style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: '0.925rem' }}>
+                            {c.name}
+                          </span>
+                          {notesMap && notesMap[companyKey] && (
+                            <span
+                              title={`Private Note: ${notesMap[companyKey]}`}
+                              onClick={() => onExploreCompany && onExploreCompany(c)}
+                              style={{
+                                fontSize: '0.675rem',
+                                color: '#fbbf24',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '3px',
+                                cursor: 'pointer',
+                                background: 'rgba(251, 191, 36, 0.12)',
+                                border: '1px solid rgba(251, 191, 36, 0.35)',
+                                padding: '1px 5px',
+                                borderRadius: '4px',
+                              }}
+                            >
+                              <FileText size={10} /> Note
+                            </span>
+                          )}
+                        </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginTop: '4px' }}>
                           <a
                             href={googleSearch}

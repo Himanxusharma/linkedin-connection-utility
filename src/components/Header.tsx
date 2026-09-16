@@ -10,6 +10,7 @@ import {
   FileSpreadsheet,
   ShieldCheck,
   Zap,
+  Keyboard,
 } from 'lucide-react';
 import { isFirebaseConfigured } from '../lib/firebase';
 
@@ -19,6 +20,7 @@ interface HeaderProps {
   totalCompanies: number;
   totalCategories: number;
   onOpenFirebaseModal: () => void;
+  onOpenShortcuts?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -27,6 +29,7 @@ export const Header: React.FC<HeaderProps> = ({
   totalCompanies,
   totalCategories,
   onOpenFirebaseModal,
+  onOpenShortcuts,
 }) => {
   const isCloud = isFirebaseConfigured();
 
@@ -150,6 +153,30 @@ export const Header: React.FC<HeaderProps> = ({
                 </>
               )}
             </button>
+
+            {onOpenShortcuts && (
+              <button
+                onClick={onOpenShortcuts}
+                className="btn btn-secondary"
+                style={{ padding: '0.45rem 0.8rem', fontSize: '0.825rem' }}
+                title="View Keyboard Shortcuts (?)"
+                aria-label="View Keyboard Shortcuts"
+              >
+                <Keyboard size={15} color="#38bdf8" />
+                <span>Shortcuts</span>
+                <kbd
+                  style={{
+                    fontSize: '0.7rem',
+                    fontFamily: 'var(--font-mono)',
+                    background: 'rgba(255,255,255,0.12)',
+                    padding: '1px 5px',
+                    borderRadius: '3px',
+                  }}
+                >
+                  ?
+                </kbd>
+              </button>
+            )}
           </div>
         </div>
 

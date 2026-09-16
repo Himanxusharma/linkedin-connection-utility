@@ -19,6 +19,8 @@ export interface CompanyRecord {
   source?: string;
   updatedAt?: string;
   outreachStatus?: OutreachStatus;
+  notes?: string;
+  isStarred?: boolean;
 }
 
 export type VerificationStatus = 'verified' | 'guess';
@@ -35,6 +37,8 @@ export interface WorkspaceRow {
   searchUrl: string;
   isCustomSlug?: boolean;
   outreachStatus?: OutreachStatus;
+  notes?: string;
+  isStarred?: boolean;
 }
 
 export interface TargetRoleOption {

@@ -44,6 +44,10 @@ interface WorkspaceViewProps {
   preloadedNames?: string[];
   onCompanyAddedToDb: (company: CompanyRecord) => void;
   onExploreCompany?: (company: CompanyRecord) => void;
+  starredSet?: Set<string>;
+  onToggleStar?: (companyKey: string) => void;
+  notesMap?: Record<string, string>;
+  onUpdateNotes?: (companyKey: string, noteText: string) => void;
 }
 
 export const WorkspaceView: React.FC<WorkspaceViewProps> = ({
@@ -52,6 +56,10 @@ export const WorkspaceView: React.FC<WorkspaceViewProps> = ({
   preloadedNames,
   onCompanyAddedToDb,
   onExploreCompany,
+  starredSet,
+  onToggleStar,
+  notesMap,
+  onUpdateNotes,
 }) => {
   const [inputText, setInputText] = useState<string>('');
   const [rows, setRows] = useState<WorkspaceRow[]>([]);

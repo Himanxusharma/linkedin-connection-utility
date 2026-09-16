@@ -4,39 +4,91 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Header } from '../components/Header';
 import { CatalogView } from '../components/CatalogView';
 import { WorkspaceView } from '../components/WorkspaceView';
-import { FirebaseModal } from '../components/FirebaseModal';
 import { CompanyExplorerDrawer } from '../components/CompanyExplorerDrawer';
+import { FirebaseModal } from '../components/FirebaseModal';
+import { KeyboardShortcutsModal } from '../components/KeyboardShortcutsModal';
 import { CompanyRecord } from '../types/company';
-import { getCompanies } from '../lib/firebase';
+import seedCompanies from '../data/seed-companies.json';
 import { CheckCircle, ShieldAlert } from 'lucide-react';
 
-interface Toast {
+interface ToastItem {
   id: string;
   message: string;
 }
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState<'catalog' | 'workspace'>('catalog');
-  const [companies, setCompanies] = useState<CompanyRecord[]>([]);
-  const [isFirebaseModalOpen, setIsFirebaseModalOpen] = useState<boolean>(false);
+  const [companies, setCompanies] = useState<CompanyRecord[]>(seedCompanies as CompanyRecord[]);
   const [preloadedNames, setPreloadedNames] = useState<string[]>([]);
-  const [toasts, setToasts] = useState<Toast[]>([]);
-
-  // Explorer drawer state
   const [selectedCompanyForExplorer, setSelectedCompanyForExplorer] = useState<CompanyRecord | null>(null);
   const [isExplorerOpen, setIsExplorerOpen] = useState<boolean>(false);
+  const [isFirebaseModalOpen, setIsFirebaseModalOpen] = useState<boolean>(false);
+  const [isShortcutsOpen, setIsShortcutsOpen] = useState<boolean>(false);
+  const [toasts, setToasts] = useState<ToastItem[]>([]);
 
-  // Load companies on mount (from Cloud Firestore if configured, otherwise seed)
+  // Starred / Bookmarked Companies state
+  const [starredSet, setStarredSet] = useState<Set<string>>(new Set());
+
+  // Personal Company Notes state
+  const [notesMap, setNotesMap] = useState<Record<string, string>>({});
+
+  // Load Starred and Notes on mount
   useEffect(() => {
-    async function loadData() {
-      const res = await getCompanies();
-      setCompanies(res.companies);
+    try {
+      const savedStarred = localStorage.getItem('linkbuilder_starred');
+      if (savedStarred) setStarredSet(new Set(JSON.parse(savedStarred)));
+
+      const savedNotes = localStorage.getItem('linkbuilder_company_notes');
+      if (savedNotes) setNotesMap(JSON.parse(savedNotes));
+    } catch {
+      // ignore
     }
-    loadData();
+  }, []);
+
+  const handleToggleStar = (companyKey: string) => {
+    setStarredSet((prev) => {
+      const next = new Set(prev);
+      if (next.has(companyKey)) {
+        next.delete(companyKey);
+        showToast('Removed from Starred');
+      } else {
+        next.add(companyKey);
+        showToast('⭐ Added to Starred Companies!');
+      }
+      try {
+        localStorage.setItem('linkbuilder_starred', JSON.stringify(Array.from(next)));
+      } catch {}
+      return next;
+    });
+  };
+
+  const handleUpdateNotes = (companyKey: string, noteText: string) => {
+    setNotesMap((prev) => {
+      const next = { ...prev, [companyKey]: noteText };
+      try {
+        localStorage.setItem('linkbuilder_company_notes', JSON.stringify(next));
+      } catch {}
+      return next;
+    });
+  };
+
+  // Global '?' key listener for Keyboard Shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const activeTag = (document.activeElement?.tagName || '').toLowerCase();
+      if (activeTag === 'input' || activeTag === 'textarea') return;
+
+      if (e.key === '?' || (e.shiftKey && e.key === '/')) {
+        e.preventDefault();
+        setIsShortcutsOpen((prev) => !prev);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
   const showToast = (message: string) => {
-    const id = `toast-${Date.now()}-${Math.random()}`;
+    const id = Math.random().toString(36).substring(2, 9);
     setToasts((prev) => [...prev, { id, message }]);
     setTimeout(() => {
       setToasts((prev) => prev.filter((t) => t.id !== id));
@@ -80,16 +132,21 @@ export default function Home() {
         totalCompanies={companies.length}
         totalCategories={totalCategories}
         onOpenFirebaseModal={() => setIsFirebaseModalOpen(true)}
+        onOpenShortcuts={() => setIsShortcutsOpen(true)}
       />
 
       {/* Main Content Area */}
-      <div className="container">
+      <div className="container" id="main-content">
         {activeTab === 'catalog' ? (
           <CatalogView
             companies={companies}
             onNotify={showToast}
             onSendToWorkspace={handleSendToWorkspace}
             onExploreCompany={handleOpenExplorer}
+            starredSet={starredSet}
+            onToggleStar={handleToggleStar}
+            notesMap={notesMap}
+            onUpdateNotes={handleUpdateNotes}
           />
         ) : (
           <WorkspaceView
@@ -98,6 +155,10 @@ export default function Home() {
             preloadedNames={preloadedNames}
             onCompanyAddedToDb={handleCompanyAddedToDb}
             onExploreCompany={handleOpenExplorer}
+            starredSet={starredSet}
+            onToggleStar={handleToggleStar}
+            notesMap={notesMap}
+            onUpdateNotes={handleUpdateNotes}
           />
         )}
       </div>
@@ -108,6 +169,10 @@ export default function Home() {
         isOpen={isExplorerOpen}
         onClose={() => setIsExplorerOpen(false)}
         onNotify={showToast}
+        isStarred={selectedCompanyForExplorer ? starredSet.has(selectedCompanyForExplorer.slug || selectedCompanyForExplorer.name) : false}
+        onToggleStar={() => selectedCompanyForExplorer && handleToggleStar(selectedCompanyForExplorer.slug || selectedCompanyForExplorer.name)}
+        notes={selectedCompanyForExplorer ? notesMap[selectedCompanyForExplorer.slug || selectedCompanyForExplorer.name] || '' : ''}
+        onSaveNotes={(n) => selectedCompanyForExplorer && handleUpdateNotes(selectedCompanyForExplorer.slug || selectedCompanyForExplorer.name, n)}
       />
 
       {/* Firebase Info Modal */}
@@ -117,8 +182,14 @@ export default function Home() {
         companiesCount={companies.length}
       />
 
-      {/* Floating Toast Notifications */}
-      <div className="toast-container">
+      {/* Keyboard Shortcuts Cheat Sheet Modal */}
+      <KeyboardShortcutsModal
+        isOpen={isShortcutsOpen}
+        onClose={() => setIsShortcutsOpen(false)}
+      />
+
+      {/* Floating Toast Notifications with ARIA live announcement */}
+      <div className="toast-container" role="status" aria-live="polite" aria-atomic="true">
         {toasts.map((t) => (
           <div key={t.id} className="toast">
             <CheckCircle size={16} color="#34d399" />
