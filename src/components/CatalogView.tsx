@@ -26,6 +26,7 @@ import {
   FileSpreadsheet,
   FileCode,
   Layers3,
+  Zap,
 } from 'lucide-react';
 import Papa from 'papaparse';
 import { CompanyRecord, OutreachStatus } from '../types/company';
@@ -36,6 +37,7 @@ import {
   TARGET_ROLE_OPTIONS,
 } from '../lib/slug-heuristics';
 import { OutreachMessageModal } from './OutreachMessageModal';
+import { SpeedRunRunnerModal } from './SpeedRunRunnerModal';
 
 interface CatalogViewProps {
   companies: CompanyRecord[];
@@ -69,6 +71,10 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
   const [messageCompany, setMessageCompany] = useState<CompanyRecord | null>(null);
   const [isMessageModalOpen, setIsMessageModalOpen] = useState<boolean>(false);
 
+  // Speed-Run Runner state
+  const [isSpeedRunOpen, setIsSpeedRunOpen] = useState<boolean>(false);
+  const [speedRunCompanies, setSpeedRunCompanies] = useState<CompanyRecord[]>([]);
+
   // Sorting state
   const [sortField, setSortField] = useState<SortField>('rank');
   const [sortOrder, setSortOrder] = useState<SortOrder>('asc');
@@ -98,17 +104,9 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
     onNotify(`Status updated to ${status.replace('_', ' ')}!`);
   };
 
-  // Keyboard shortcut Cmd+K
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
-        e.preventDefault();
-        searchInputRef.current?.focus();
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
+  const getSelectedRecords = (): CompanyRecord[] => {
+    return companies.filter((c) => selectedIds.has(c.id || c.name));
+  };
 
   // Category counts
   const categoryCounts = useMemo(() => {
@@ -215,6 +213,40 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
     setSelectedIds(next);
   };
 
+  const startSpeedRun = (subset?: CompanyRecord[]) => {
+    const list = subset && subset.length > 0 ? subset : filteredCompanies;
+    if (list.length === 0) {
+      onNotify('No companies found matching current filters to speed-run!');
+      return;
+    }
+    setSpeedRunCompanies(list);
+    setIsSpeedRunOpen(true);
+    onNotify(`⚡ Starting Speed-Run for ${list.length} companies!`);
+  };
+
+  // Keyboard shortcuts (Cmd+K for search, Shift+S for speed run)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const activeTag = (document.activeElement?.tagName || '').toLowerCase();
+      if (activeTag === 'input' || activeTag === 'textarea') return;
+
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        searchInputRef.current?.focus();
+        return;
+      }
+
+      if (e.shiftKey && e.key.toLowerCase() === 's') {
+        e.preventDefault();
+        const selected = companies.filter((c) => selectedIds.has(c.id || c.name));
+        startSpeedRun(selected.length > 0 ? selected : filteredCompanies);
+        return;
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [companies, selectedIds, filteredCompanies]);
+
   const copyToClipboard = async (text: string, label: string, key: string) => {
     try {
       await navigator.clipboard.writeText(text);
@@ -286,10 +318,6 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
       window.open(url, '_blank');
     });
     onNotify(`Opened ${batch.length} company People tabs!`);
-  };
-
-  const getSelectedRecords = (): CompanyRecord[] => {
-    return companies.filter((c) => selectedIds.has(c.id || c.name));
   };
 
   const handleSendSelectedToWorkspace = () => {
@@ -486,6 +514,30 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
 
           {/* Export & Batch Actions */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+            {/* Turbo Speed-Run Primary Button */}
+            <button
+              className="btn"
+              onClick={() => startSpeedRun(selectedIds.size > 0 ? getSelectedRecords() : filteredCompanies)}
+              title="Launch high-speed outreach runner with companion sync and auto-copied connection notes (Shift+S)"
+              style={{
+                fontSize: '0.8rem',
+                padding: '0.45rem 1rem',
+                background: 'linear-gradient(135deg, #eab308 0%, #f59e0b 100%)',
+                color: '#000',
+                fontWeight: 800,
+                border: 'none',
+                borderRadius: 'var(--radius-md)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                boxShadow: '0 2px 14px rgba(234, 179, 8, 0.45)',
+                cursor: 'pointer',
+              }}
+            >
+              <Zap size={15} fill="#000" />
+              <span>⚡ Speed-Run ({selectedIds.size > 0 ? `${selectedIds.size} Selected` : `${filteredCompanies.length}`})</span>
+            </button>
+
             <button
               className="btn btn-secondary"
               onClick={() => copyAsGoogleSheetsTsv(filteredCompanies)}
@@ -600,6 +652,27 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
+            <button
+              className="btn"
+              onClick={() => startSpeedRun(getSelectedRecords())}
+              style={{
+                fontSize: '0.8rem',
+                padding: '0.45rem 0.9rem',
+                background: 'linear-gradient(135deg, #eab308 0%, #f59e0b 100%)',
+                color: '#000',
+                fontWeight: 800,
+                border: 'none',
+                borderRadius: 'var(--radius-md)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                boxShadow: '0 2px 14px rgba(234, 179, 8, 0.45)',
+                cursor: 'pointer',
+              }}
+            >
+              <Zap size={14} fill="#000" />
+              <span>Speed-Run Selected ({selectedIds.size})</span>
+            </button>
             <button
               className="btn btn-secondary"
               onClick={() => openBatchInTabs(getSelectedRecords())}
@@ -915,6 +988,17 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
         onClose={() => setIsMessageModalOpen(false)}
         onNotify={onNotify}
         targetRoleKeyword={currentRoleKeyword}
+      />
+
+      {/* Turbo Speed-Run Outreach Runner Modal */}
+      <SpeedRunRunnerModal
+        isOpen={isSpeedRunOpen}
+        onClose={() => setIsSpeedRunOpen(false)}
+        companies={speedRunCompanies}
+        outreachMap={outreachMap}
+        onUpdateStatus={handleUpdateStatus}
+        onNotify={onNotify}
+        initialRoleId={selectedRoleId}
       />
     </div>
   );

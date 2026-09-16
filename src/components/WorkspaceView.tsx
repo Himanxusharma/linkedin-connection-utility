@@ -23,6 +23,7 @@ import {
   FileSpreadsheet,
   FileCode,
   BriefcaseBusiness,
+  Zap,
 } from 'lucide-react';
 import Papa from 'papaparse';
 import { CompanyRecord, WorkspaceRow, VerificationStatus, OutreachStatus } from '../types/company';
@@ -35,6 +36,7 @@ import {
 } from '../lib/slug-heuristics';
 import { saveCompany } from '../lib/firebase';
 import { OutreachMessageModal } from './OutreachMessageModal';
+import { SpeedRunRunnerModal } from './SpeedRunRunnerModal';
 
 interface WorkspaceViewProps {
   companiesDb: CompanyRecord[];
@@ -63,6 +65,30 @@ export const WorkspaceView: React.FC<WorkspaceViewProps> = ({
   // Message modal state
   const [messageCompany, setMessageCompany] = useState<CompanyRecord | null>(null);
   const [isMessageModalOpen, setIsMessageModalOpen] = useState<boolean>(false);
+
+  // Speed-Run Runner state
+  const [isSpeedRunOpen, setIsSpeedRunOpen] = useState<boolean>(false);
+  const [outreachMap, setOutreachMap] = useState<Record<string, OutreachStatus>>({});
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('linkbuilder_outreach_status');
+      if (saved) setOutreachMap(JSON.parse(saved));
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  const handleUpdateStatus = (companyKey: string, status: OutreachStatus) => {
+    const next = { ...outreachMap, [companyKey]: status };
+    setOutreachMap(next);
+    try {
+      localStorage.setItem('linkbuilder_outreach_status', JSON.stringify(next));
+    } catch {
+      // ignore
+    }
+    onNotify(`Status updated to ${status.replace('_', ' ')}!`);
+  };
 
   const currentRoleKeyword = useMemo(() => {
     const opt = TARGET_ROLE_OPTIONS.find((r) => r.id === selectedRoleId);
@@ -505,6 +531,30 @@ export const WorkspaceView: React.FC<WorkspaceViewProps> = ({
             </div>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+              {/* Speed-Run Button for Workspace List */}
+              <button
+                className="btn"
+                onClick={() => setIsSpeedRunOpen(true)}
+                title="Launch high-speed outreach runner for workspace companies"
+                style={{
+                  fontSize: '0.775rem',
+                  padding: '0.45rem 0.95rem',
+                  background: 'linear-gradient(135deg, #eab308 0%, #f59e0b 100%)',
+                  color: '#000',
+                  fontWeight: 800,
+                  border: 'none',
+                  borderRadius: 'var(--radius-md)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '5px',
+                  boxShadow: '0 2px 12px rgba(234, 179, 8, 0.4)',
+                  cursor: 'pointer',
+                }}
+              >
+                <Zap size={14} fill="#000" />
+                <span>⚡ Speed-Run ({rows.length})</span>
+              </button>
+
               <button
                 className="btn btn-secondary"
                 onClick={copyAsGoogleSheetsTsv}
@@ -810,6 +860,25 @@ export const WorkspaceView: React.FC<WorkspaceViewProps> = ({
         onClose={() => setIsMessageModalOpen(false)}
         onNotify={onNotify}
         targetRoleKeyword={currentRoleKeyword}
+      />
+
+      {/* Turbo Speed-Run Outreach Runner Modal */}
+      <SpeedRunRunnerModal
+        isOpen={isSpeedRunOpen}
+        onClose={() => setIsSpeedRunOpen(false)}
+        companies={rows.map((r, idx) => ({
+          id: r.id,
+          rank: idx + 1,
+          name: r.companyName,
+          slug: r.slug,
+          category: r.category || 'General',
+          careersUrl: r.careersLink,
+          verified: r.status === 'verified',
+        }))}
+        outreachMap={outreachMap}
+        onUpdateStatus={handleUpdateStatus}
+        onNotify={onNotify}
+        initialRoleId={selectedRoleId}
       />
     </div>
   );
