@@ -48,11 +48,14 @@ interface WorkspaceViewProps {
   onNotify: (msg: string) => void;
   preloadedNames?: string[];
   onCompanyAddedToDb: (company: CompanyRecord) => void;
+  onBatchCompaniesAddedToDb?: (companies: CompanyRecord[]) => void;
   onExploreCompany?: (company: CompanyRecord) => void;
   starredSet?: Set<string>;
   onToggleStar?: (companyKey: string) => void;
   notesMap?: Record<string, string>;
   onUpdateNotes?: (companyKey: string, noteText: string) => void;
+  outreachMap?: Record<string, OutreachStatus>;
+  onUpdateOutreachStatus?: (companyKey: string, status: OutreachStatus) => void;
 }
 
 export const WorkspaceView: React.FC<WorkspaceViewProps> = ({
@@ -60,11 +63,14 @@ export const WorkspaceView: React.FC<WorkspaceViewProps> = ({
   onNotify,
   preloadedNames,
   onCompanyAddedToDb,
+  onBatchCompaniesAddedToDb,
   onExploreCompany,
   starredSet,
   onToggleStar,
   notesMap,
   onUpdateNotes,
+  outreachMap: propOutreachMap,
+  onUpdateOutreachStatus,
 }) => {
   const [inputText, setInputText] = useState<string>('');
   const [rows, setRows] = useState<WorkspaceRow[]>([]);
@@ -93,15 +99,21 @@ export const WorkspaceView: React.FC<WorkspaceViewProps> = ({
     }
   }, []);
 
+  const activeOutreachMap = propOutreachMap || outreachMap;
+
   const handleUpdateStatus = (companyKey: string, status: OutreachStatus) => {
-    const next = { ...outreachMap, [companyKey]: status };
-    setOutreachMap(next);
-    try {
-      localStorage.setItem('linkbuilder_outreach_status', JSON.stringify(next));
-    } catch {
-      // ignore
+    if (onUpdateOutreachStatus) {
+      onUpdateOutreachStatus(companyKey, status);
+    } else {
+      const next = { ...activeOutreachMap, [companyKey]: status };
+      setOutreachMap(next);
+      try {
+        localStorage.setItem('linkbuilder_outreach_status', JSON.stringify(next));
+      } catch {
+        // ignore
+      }
+      onNotify(`Status updated to ${status.replace('_', ' ')}!`);
     }
-    onNotify(`Status updated to ${status.replace('_', ' ')}!`);
   };
 
   const currentRoleKeyword = useMemo(() => {
@@ -739,7 +751,41 @@ export const WorkspaceView: React.FC<WorkspaceViewProps> = ({
                 <span>Copy All Jobs</span>
               </button>
 
-              <button className="btn btn-primary" onClick={handleExportCsv} style={{ fontSize: '0.775rem' }}>
+              {onBatchCompaniesAddedToDb && (
+                <button
+                  className="btn btn-primary"
+                  onClick={() => {
+                    const validRecords: CompanyRecord[] = rows
+                      .filter((r) => Boolean(r.slug))
+                      .map((r, idx) => ({
+                        id: `custom-${Date.now()}-${idx}-${r.slug}`,
+                        name: r.companyName,
+                        slug: r.slug,
+                        category: r.category || 'Custom Workspace',
+                        verified: r.status === 'verified',
+                        careersUrl: r.careersLink,
+                        updatedAt: new Date().toISOString(),
+                        source: 'Workspace Bulk Ingest',
+                      }));
+                    if (validRecords.length === 0) {
+                      onNotify('No valid companies to save!');
+                      return;
+                    }
+                    onBatchCompaniesAddedToDb(validRecords);
+                  }}
+                  style={{
+                    fontSize: '0.775rem',
+                    padding: '0.45rem 0.85rem',
+                    background: 'linear-gradient(135deg, #6366f1 0%, #06b6d4 100%)',
+                  }}
+                  title="Save all valid workspace companies into persistent catalog"
+                >
+                  <Save size={14} />
+                  <span>Save All ({rows.filter((r) => Boolean(r.slug)).length}) to Catalog</span>
+                </button>
+              )}
+
+              <button className="btn btn-secondary" onClick={handleExportCsv} style={{ fontSize: '0.775rem' }}>
                 <Download size={14} /> Export CSV
               </button>
             </div>
@@ -769,6 +815,7 @@ export const WorkspaceView: React.FC<WorkspaceViewProps> = ({
                 <th style={{ minWidth: '160px' }}>Company</th>
                 <th style={{ width: '220px', minWidth: '180px' }}>Slug (Editable)</th>
                 <th style={{ minWidth: '110px' }}>Status</th>
+                <th style={{ minWidth: '135px' }}>Pipeline</th>
                 <th style={{ minWidth: '140px' }}>People Link</th>
                 <th style={{ minWidth: '130px' }}>Jobs Link</th>
                 <th style={{ width: '150px', minWidth: '130px' }}>Actions</th>
@@ -832,6 +879,39 @@ export const WorkspaceView: React.FC<WorkspaceViewProps> = ({
                           </>
                         )}
                       </span>
+                    </td>
+                    <td>
+                      <select
+                        value={activeOutreachMap[row.slug || row.companyName] || 'to_contact'}
+                        onChange={(e) => handleUpdateStatus(row.slug || row.companyName, e.target.value as OutreachStatus)}
+                        className="select-field"
+                        style={{
+                          padding: '0.35rem 0.55rem',
+                          fontSize: '0.78rem',
+                          fontWeight: 600,
+                          borderRadius: 'var(--radius-md)',
+                          backgroundColor: 'rgba(15, 23, 42, 0.9)',
+                          border: '1px solid var(--border-subtle)',
+                          color:
+                            (activeOutreachMap[row.slug || row.companyName] || 'to_contact') === 'connected'
+                              ? '#34d399'
+                              : (activeOutreachMap[row.slug || row.companyName] || 'to_contact') === 'applied'
+                              ? '#38bdf8'
+                              : (activeOutreachMap[row.slug || row.companyName] || 'to_contact') === 'contacted'
+                              ? '#fbbf24'
+                              : (activeOutreachMap[row.slug || row.companyName] || 'to_contact') === 'reviewed'
+                              ? '#a855f7'
+                              : 'var(--text-muted)',
+                          cursor: 'pointer',
+                        }}
+                        aria-label={`Update pipeline status for ${row.companyName}`}
+                      >
+                        <option value="to_contact" style={{ backgroundColor: '#0f172a', color: '#94a3b8' }}>⚪ To Contact</option>
+                        <option value="reviewed" style={{ backgroundColor: '#0f172a', color: '#c084fc' }}>🟣 Reviewed</option>
+                        <option value="contacted" style={{ backgroundColor: '#0f172a', color: '#fde047' }}>🟡 Contacted</option>
+                        <option value="applied" style={{ backgroundColor: '#0f172a', color: '#38bdf8' }}>🔵 Applied</option>
+                        <option value="connected" style={{ backgroundColor: '#0f172a', color: '#34d399' }}>🟢 Connected</option>
+                      </select>
                     </td>
                     <td>
                       {row.slug ? (

@@ -11,6 +11,7 @@ import {
   ShieldCheck,
   Zap,
   Keyboard,
+  HardDrive,
 } from 'lucide-react';
 import { isFirebaseConfigured } from '../lib/firebase';
 
@@ -21,6 +22,7 @@ interface HeaderProps {
   totalCategories: number;
   onOpenFirebaseModal: () => void;
   onOpenShortcuts?: () => void;
+  onOpenBackupModal?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -30,6 +32,7 @@ export const Header: React.FC<HeaderProps> = ({
   totalCategories,
   onOpenFirebaseModal,
   onOpenShortcuts,
+  onOpenBackupModal,
 }) => {
   const isCloud = isFirebaseConfigured();
 
@@ -175,6 +178,19 @@ export const Header: React.FC<HeaderProps> = ({
                 >
                   ?
                 </kbd>
+              </button>
+            )}
+
+            {onOpenBackupModal && (
+              <button
+                onClick={onOpenBackupModal}
+                className="btn btn-secondary"
+                style={{ padding: '0.45rem 0.8rem', fontSize: '0.825rem' }}
+                title="Backup & Restore Pipeline Data"
+                aria-label="Backup and Restore Workspace Data"
+              >
+                <HardDrive size={15} color="#10b981" />
+                <span>Backup & Sync</span>
               </button>
             )}
           </div>

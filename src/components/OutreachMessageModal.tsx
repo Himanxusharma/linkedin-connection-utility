@@ -40,46 +40,92 @@ export const OutreachMessageModal: React.FC<OutreachMessageModalProps> = ({
   targetRoleKeyword,
 }) => {
   const [selectedTemplate, setSelectedTemplate] = useState<string>('referral');
+  const [userRole, setUserRole] = useState<string>('Software Engineer');
+  const [recipientName, setRecipientName] = useState<string>('');
   const [message, setMessage] = useState<string>('');
   const [copied, setCopied] = useState<boolean>(false);
+
+  useEffect(() => {
+    try {
+      const savedRole = localStorage.getItem('linkbuilder_user_role');
+      if (savedRole) {
+        setUserRole(savedRole);
+      } else if (targetRoleKeyword) {
+        setUserRole(targetRoleKeyword);
+      }
+    } catch {
+      // ignore
+    }
+  }, [targetRoleKeyword]);
+
+  const handleRoleChange = (val: string) => {
+    setUserRole(val);
+    try {
+      localStorage.setItem('linkbuilder_user_role', val);
+    } catch {}
+  };
 
   const templates: TemplateOption[] = [
     {
       id: 'referral',
       title: 'Job Referral / Inquiry',
-      description: 'Polite note to an engineer or lead asking to connect about hiring',
-      text: `Hi [Name], loved following {Company}'s work in {Category}. As a software engineer following your team's engineering journey, I'd love to connect and keep in touch regarding open opportunities!`,
+      description: 'Polite note to a team member or lead asking to connect about hiring',
+      text: `Hi {Name}, loved following {Company}'s work in {Category}. As a {Role} following your team's journey, I'd love to connect and keep in touch regarding open opportunities!`,
     },
     {
       id: 'recruiter',
       title: 'Recruiter Outreach',
       description: 'Direct, professional intro for talent acquisition leads',
-      text: `Hi [Name], reaching out to connect regarding engineering roles at {Company}. Would love to share my background and see if my skills align with any upcoming priorities on your team!`,
+      text: `Hi {Name}, reaching out to connect regarding {Role} opportunities at {Company}. Would love to share my background and see if my skills align with any upcoming priorities on your team!`,
     },
     {
-      id: 'partnership',
-      title: 'Founder / Peer Connect',
-      description: 'High-level networking note for leaders and founders',
-      text: `Hi [Name], inspired by {Company}'s innovation in {Category}. Always looking to connect with builders and exchange ideas around scaling high-impact technology products!`,
+      id: 'alumni',
+      title: 'Alumni Network',
+      description: 'Warm outreach leveraging shared college or community connection',
+      text: `Hi {Name}, noticed we share an alumni connection and that you're at {Company}. As a fellow grad and {Role}, I'd love to connect and learn more about your experience there!`,
+    },
+    {
+      id: 'manager',
+      title: 'Hiring Manager Pitch',
+      description: 'High-impact value proposition note for team leads and directors',
+      text: `Hi {Name}, inspired by {Company}'s growth in {Category}. As a {Role} passionate about this space, I'd love to connect and exchange ideas on building scalable solutions!`,
+    },
+    {
+      id: 'followup',
+      title: 'Application Follow-Up',
+      description: 'Polite follow-up note after applying to an official job opening',
+      text: `Hi {Name}, I recently applied for the {Role} opening at {Company}. Reaching out to express my genuine enthusiasm and connect with the team!`,
+    },
+    {
+      id: 'peer',
+      title: 'Peer / Coffee Chat',
+      description: 'Low-pressure informational connection note',
+      text: `Hi {Name}, really admire your work at {Company}. Would love to connect and follow your journey as a fellow builder in tech!`,
     },
     {
       id: 'custom',
       title: 'Blank Note',
       description: 'Write your own custom note from scratch',
-      text: `Hi [Name], noticed your work at {Company}. Would love to connect and follow your journey!`,
+      text: `Hi {Name}, noticed your work at {Company}. Would love to connect and follow your journey!`,
     },
   ];
 
-  // Whenever company or template changes, generate message
+  // Whenever company, template, userRole, or recipientName changes, generate message
   useEffect(() => {
     if (company) {
       const tmpl = templates.find((t) => t.id === selectedTemplate) || templates[0];
+      const nameReplacement = recipientName.trim() || '[Name]';
+      const roleReplacement = userRole.trim() || 'software engineer';
+      const categoryReplacement = company.category ? company.category.split('/')[0].trim() : 'tech';
+
       const filled = tmpl.text
+        .replace(/\{Name\}/g, nameReplacement)
+        .replace(/\{Role\}/g, roleReplacement)
         .replace(/\{Company\}/g, company.name)
-        .replace(/\{Category\}/g, company.category.split('/')[0].trim());
+        .replace(/\{Category\}/g, categoryReplacement);
       setMessage(filled);
     }
-  }, [company, selectedTemplate]);
+  }, [company, selectedTemplate, userRole, recipientName]);
 
   if (!isOpen || !company) return null;
 
@@ -204,6 +250,47 @@ export const OutreachMessageModal: React.FC<OutreachMessageModalProps> = ({
                 </button>
               );
             })}
+          </div>
+        </div>
+
+        {/* Dynamic Personalization Inputs */}
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+            gap: '0.75rem',
+            marginBottom: '1rem',
+            padding: '0.75rem',
+            borderRadius: 'var(--radius-md)',
+            backgroundColor: 'rgba(15, 23, 42, 0.6)',
+            border: '1px solid var(--border-subtle)',
+          }}
+        >
+          <div>
+            <label style={{ fontSize: '0.725rem', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: '0.25rem' }}>
+              My Target Role / Title:
+            </label>
+            <input
+              type="text"
+              className="input-field"
+              value={userRole}
+              onChange={(e) => handleRoleChange(e.target.value)}
+              placeholder="e.g. Software Engineer, Product Manager"
+              style={{ fontSize: '0.8rem', padding: '0.35rem 0.6rem' }}
+            />
+          </div>
+          <div>
+            <label style={{ fontSize: '0.725rem', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: '0.25rem' }}>
+              Recipient Name (Optional):
+            </label>
+            <input
+              type="text"
+              className="input-field"
+              value={recipientName}
+              onChange={(e) => setRecipientName(e.target.value)}
+              placeholder="e.g. Alex (replaces [Name])"
+              style={{ fontSize: '0.8rem', padding: '0.35rem 0.6rem' }}
+            />
           </div>
         </div>
 

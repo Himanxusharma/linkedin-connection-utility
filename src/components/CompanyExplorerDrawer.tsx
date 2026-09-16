@@ -19,7 +19,7 @@ import {
   Star,
   FileText,
 } from 'lucide-react';
-import { CompanyRecord } from '../types/company';
+import { CompanyRecord, OutreachStatus } from '../types/company';
 import { buildPeopleUrl, buildJobsUrl, buildGoogleSearchUrl } from '../lib/slug-heuristics';
 
 interface CompanyExplorerDrawerProps {
@@ -31,6 +31,8 @@ interface CompanyExplorerDrawerProps {
   onToggleStar?: () => void;
   notes?: string;
   onSaveNotes?: (notes: string) => void;
+  outreachStatus?: OutreachStatus;
+  onUpdateOutreachStatus?: (status: OutreachStatus) => void;
 }
 
 type TabType = 'people' | 'jobs' | 'careers' | 'iframe';
@@ -44,6 +46,8 @@ export const CompanyExplorerDrawer: React.FC<CompanyExplorerDrawerProps> = ({
   onToggleStar,
   notes = '',
   onSaveNotes,
+  outreachStatus = 'to_contact',
+  onUpdateOutreachStatus,
 }) => {
   const [activeTab, setActiveTab] = useState<TabType>('people');
   const [copiedUrl, setCopiedUrl] = useState<boolean>(false);
@@ -224,6 +228,39 @@ export const CompanyExplorerDrawer: React.FC<CompanyExplorerDrawerProps> = ({
               >
                 <Star size={16} fill={isStarred ? '#facc15' : 'transparent'} color={isStarred ? '#facc15' : 'var(--text-muted)'} />
               </button>
+            )}
+
+            {onUpdateOutreachStatus && (
+              <select
+                value={outreachStatus}
+                onChange={(e) => onUpdateOutreachStatus(e.target.value as OutreachStatus)}
+                aria-label="Change pipeline status"
+                style={{
+                  padding: '0.4rem 0.65rem',
+                  fontSize: '0.78rem',
+                  fontWeight: 700,
+                  borderRadius: 'var(--radius-md)',
+                  backgroundColor: 'rgba(15, 23, 42, 0.95)',
+                  border: '1px solid var(--border-medium)',
+                  color:
+                    outreachStatus === 'connected'
+                      ? '#34d399'
+                      : outreachStatus === 'applied'
+                      ? '#38bdf8'
+                      : outreachStatus === 'contacted'
+                      ? '#fbbf24'
+                      : outreachStatus === 'reviewed'
+                      ? '#a855f7'
+                      : 'var(--text-muted)',
+                  cursor: 'pointer',
+                }}
+              >
+                <option value="to_contact" style={{ backgroundColor: '#0f172a', color: '#94a3b8' }}>⚪ To Contact</option>
+                <option value="reviewed" style={{ backgroundColor: '#0f172a', color: '#c084fc' }}>🟣 Reviewed</option>
+                <option value="contacted" style={{ backgroundColor: '#0f172a', color: '#fde047' }}>🟡 Contacted</option>
+                <option value="applied" style={{ backgroundColor: '#0f172a', color: '#38bdf8' }}>🔵 Applied</option>
+                <option value="connected" style={{ backgroundColor: '#0f172a', color: '#34d399' }}>🟢 Connected</option>
+              </select>
             )}
 
             <button

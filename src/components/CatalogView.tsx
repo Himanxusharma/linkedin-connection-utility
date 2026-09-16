@@ -50,8 +50,12 @@ interface CatalogViewProps {
   onExploreCompany?: (company: CompanyRecord) => void;
   starredSet?: Set<string>;
   onToggleStar?: (companyKey: string) => void;
+  onBatchToggleStar?: (companyKeys: string[], star: boolean) => void;
   notesMap?: Record<string, string>;
   onUpdateNotes?: (companyKey: string, noteText: string) => void;
+  outreachMap?: Record<string, OutreachStatus>;
+  onUpdateOutreachStatus?: (companyKey: string, status: OutreachStatus) => void;
+  onBatchUpdateOutreachStatus?: (companyKeys: string[], status: OutreachStatus) => void;
 }
 
 type SortField = 'rank' | 'name' | 'category' | 'status';
@@ -64,8 +68,12 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
   onExploreCompany,
   starredSet,
   onToggleStar,
+  onBatchToggleStar,
   notesMap,
   onUpdateNotes,
+  outreachMap: propOutreachMap,
+  onUpdateOutreachStatus,
+  onBatchUpdateOutreachStatus,
 }) => {
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -127,6 +135,9 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
     onNotify(`Target role set to custom: "${trimmed}"`);
   };
 
+  // Effective active outreach map
+  const activeOutreachMap = propOutreachMap || outreachMap;
+
   // Funnel analytics
   const funnelMetrics = useMemo(() => {
     let toContact = 0;
@@ -135,7 +146,7 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
     let applied = 0;
     let connected = 0;
     companies.forEach((c) => {
-      const st = outreachMap[c.slug || c.name] || 'to_contact';
+      const st = activeOutreachMap[c.slug || c.name] || 'to_contact';
       if (st === 'reviewed') reviewed++;
       else if (st === 'contacted') contacted++;
       else if (st === 'applied') applied++;
@@ -144,17 +155,21 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
     });
     const totalOutreach = contacted + applied + connected;
     return { toContact, reviewed, contacted, applied, connected, totalOutreach };
-  }, [companies, outreachMap]);
+  }, [companies, activeOutreachMap]);
 
   const handleUpdateStatus = (companyKey: string, status: OutreachStatus) => {
-    const next = { ...outreachMap, [companyKey]: status };
-    setOutreachMap(next);
-    try {
-      localStorage.setItem('linkbuilder_outreach_status', JSON.stringify(next));
-    } catch {
-      // ignore
+    if (onUpdateOutreachStatus) {
+      onUpdateOutreachStatus(companyKey, status);
+    } else {
+      const next = { ...activeOutreachMap, [companyKey]: status };
+      setOutreachMap(next);
+      try {
+        localStorage.setItem('linkbuilder_outreach_status', JSON.stringify(next));
+      } catch {
+        // ignore
+      }
+      onNotify(`Status updated to ${status.replace('_', ' ')}!`);
     }
-    onNotify(`Status updated to ${status.replace('_', ' ')}!`);
   };
 
   const getSelectedRecords = (): CompanyRecord[] => {
@@ -220,7 +235,7 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
         c.slug.toLowerCase().includes(q) ||
         c.category.toLowerCase().includes(q);
 
-      const status = outreachMap[compKey] || 'to_contact';
+      const status = activeOutreachMap[compKey] || 'to_contact';
       const matchesStatus =
         selectedStatusFilter === 'all' || status === selectedStatusFilter;
 
@@ -238,13 +253,13 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
       } else if (sortField === 'category') {
         comparison = a.category.localeCompare(b.category);
       } else if (sortField === 'status') {
-        const statA = outreachMap[a.slug || a.name] || 'to_contact';
-        const statB = outreachMap[b.slug || b.name] || 'to_contact';
+        const statA = activeOutreachMap[a.slug || a.name] || 'to_contact';
+        const statB = activeOutreachMap[b.slug || b.name] || 'to_contact';
         comparison = statA.localeCompare(statB);
       }
       return sortOrder === 'asc' ? comparison : -comparison;
     });
-  }, [companies, selectedCategory, searchQuery, selectedStatusFilter, sortField, sortOrder, outreachMap]);
+  }, [companies, selectedCategory, searchQuery, selectedStatusFilter, sortField, sortOrder, activeOutreachMap]);
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
@@ -330,7 +345,7 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
         Starred: starredSet && starredSet.has(compKey) ? 'Yes' : 'No',
         Category: c.category,
         Slug: c.slug,
-        'Outreach Status': (outreachMap[compKey] || 'to_contact').replace('_', ' '),
+        'Outreach Status': (activeOutreachMap[compKey] || 'to_contact').replace('_', ' '),
         'Private Notes': notesMap ? notesMap[compKey] || '' : '',
         'People Link': buildPeopleUrl(c.slug, currentRoleKeyword),
         'Jobs Link': buildJobsUrl(c.slug),
@@ -360,7 +375,7 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
         starredSet && starredSet.has(compKey) ? '★' : '',
         c.category,
         c.slug,
-        outreachMap[compKey] || 'to_contact',
+        activeOutreachMap[compKey] || 'to_contact',
         notesMap ? notesMap[compKey] || '' : '',
         buildPeopleUrl(c.slug, currentRoleKeyword),
         buildJobsUrl(c.slug),
@@ -918,6 +933,68 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
+            {/* Batch Status Selector */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+              <select
+                onChange={(e) => {
+                  const val = e.target.value as OutreachStatus | '';
+                  if (!val) return;
+                  const records = getSelectedRecords();
+                  const keys = records.map((r) => r.slug || r.name);
+                  if (onBatchUpdateOutreachStatus) {
+                    onBatchUpdateOutreachStatus(keys, val);
+                  } else {
+                    const next = { ...activeOutreachMap };
+                    keys.forEach((k) => (next[k] = val));
+                    setOutreachMap(next);
+                    try {
+                      localStorage.setItem('linkbuilder_outreach_status', JSON.stringify(next));
+                    } catch {}
+                    onNotify(`Updated ${keys.length} companies to ${val.replace('_', ' ')}!`);
+                  }
+                  e.target.value = '';
+                }}
+                defaultValue=""
+                className="select-field"
+                style={{
+                  padding: '0.45rem 0.75rem',
+                  fontSize: '0.8rem',
+                  fontWeight: 700,
+                  borderRadius: 'var(--radius-md)',
+                  backgroundColor: 'rgba(15, 23, 42, 0.95)',
+                  border: '1px solid rgba(56, 189, 248, 0.4)',
+                  color: '#38bdf8',
+                  cursor: 'pointer',
+                }}
+                aria-label="Batch update status for selected companies"
+              >
+                <option value="" disabled>Set Status...</option>
+                <option value="to_contact">⚪ Mark as To Contact</option>
+                <option value="reviewed">🟣 Mark as Reviewed</option>
+                <option value="contacted">🟡 Mark as Contacted</option>
+                <option value="applied">🔵 Mark as Applied</option>
+                <option value="connected">🟢 Mark as Connected</option>
+              </select>
+            </div>
+
+            {/* Batch Star Button */}
+            {onBatchToggleStar && (
+              <button
+                className="btn btn-secondary"
+                onClick={() => {
+                  const records = getSelectedRecords();
+                  const keys = records.map((r) => r.slug || r.name);
+                  const allStarred = keys.every((k) => starredSet && starredSet.has(k));
+                  onBatchToggleStar(keys, !allStarred);
+                }}
+                style={{ fontSize: '0.8rem' }}
+                title="Toggle Star for all selected companies"
+              >
+                <Star size={14} fill="#facc15" color="#facc15" />
+                <span>Star Selected ({selectedIds.size})</span>
+              </button>
+            )}
+
             <button
               className="btn"
               onClick={() => startSpeedRun(getSelectedRecords())}
@@ -1077,7 +1154,7 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
                 const rowId = c.id || c.name;
                 const companyKey = c.slug || c.name;
                 const isSelected = selectedIds.has(rowId);
-                const currentStatus: OutreachStatus = outreachMap[companyKey] || 'to_contact';
+                const currentStatus: OutreachStatus = activeOutreachMap[companyKey] || 'to_contact';
                 const statusStyle = getStatusBadgeStyle(currentStatus);
 
                 const peopleUrl = buildPeopleUrl(c.slug, currentRoleKeyword);
@@ -1311,7 +1388,7 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
         isOpen={isSpeedRunOpen}
         onClose={() => setIsSpeedRunOpen(false)}
         companies={speedRunCompanies}
-        outreachMap={outreachMap}
+        outreachMap={activeOutreachMap}
         onUpdateStatus={handleUpdateStatus}
         onNotify={onNotify}
         initialRoleId={selectedRoleId}

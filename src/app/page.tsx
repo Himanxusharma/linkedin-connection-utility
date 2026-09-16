@@ -7,7 +7,8 @@ import { WorkspaceView } from '../components/WorkspaceView';
 import { CompanyExplorerDrawer } from '../components/CompanyExplorerDrawer';
 import { FirebaseModal } from '../components/FirebaseModal';
 import { KeyboardShortcutsModal } from '../components/KeyboardShortcutsModal';
-import { CompanyRecord } from '../types/company';
+import { DataBackupModal } from '../components/DataBackupModal';
+import { CompanyRecord, OutreachStatus } from '../types/company';
 import seedCompanies from '../data/seed-companies.json';
 import { CheckCircle, ShieldAlert } from 'lucide-react';
 
@@ -18,12 +19,13 @@ interface ToastItem {
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState<'catalog' | 'workspace'>('catalog');
-  const [companies, setCompanies] = useState<CompanyRecord[]>(seedCompanies as CompanyRecord[]);
+  const [customCompanies, setCustomCompanies] = useState<CompanyRecord[]>([]);
   const [preloadedNames, setPreloadedNames] = useState<string[]>([]);
   const [selectedCompanyForExplorer, setSelectedCompanyForExplorer] = useState<CompanyRecord | null>(null);
   const [isExplorerOpen, setIsExplorerOpen] = useState<boolean>(false);
   const [isFirebaseModalOpen, setIsFirebaseModalOpen] = useState<boolean>(false);
   const [isShortcutsOpen, setIsShortcutsOpen] = useState<boolean>(false);
+  const [isBackupModalOpen, setIsBackupModalOpen] = useState<boolean>(false);
   const [toasts, setToasts] = useState<ToastItem[]>([]);
 
   // Starred / Bookmarked Companies state
@@ -32,7 +34,10 @@ export default function Home() {
   // Personal Company Notes state
   const [notesMap, setNotesMap] = useState<Record<string, string>>({});
 
-  // Load Starred and Notes on mount
+  // Global Outreach Status map for active syncing
+  const [outreachMap, setOutreachMap] = useState<Record<string, OutreachStatus>>({});
+
+  // Load Starred, Notes, Custom Companies, and Outreach Status on mount
   useEffect(() => {
     try {
       const savedStarred = localStorage.getItem('linkbuilder_starred');
@@ -40,10 +45,24 @@ export default function Home() {
 
       const savedNotes = localStorage.getItem('linkbuilder_company_notes');
       if (savedNotes) setNotesMap(JSON.parse(savedNotes));
+
+      const savedCustom = localStorage.getItem('linkbuilder_custom_companies');
+      if (savedCustom) setCustomCompanies(JSON.parse(savedCustom));
+
+      const savedStatus = localStorage.getItem('linkbuilder_outreach_status');
+      if (savedStatus) setOutreachMap(JSON.parse(savedStatus));
     } catch {
       // ignore
     }
   }, []);
+
+  // Merge seedCompanies with persistent customCompanies
+  const companies = useMemo(() => {
+    const map = new Map<string, CompanyRecord>();
+    (seedCompanies as CompanyRecord[]).forEach((c) => map.set(c.name.toLowerCase(), c));
+    customCompanies.forEach((c) => map.set(c.name.toLowerCase(), c));
+    return Array.from(map.values());
+  }, [customCompanies]);
 
   const handleToggleStar = (companyKey: string) => {
     setStarredSet((prev) => {
@@ -62,6 +81,21 @@ export default function Home() {
     });
   };
 
+  const handleBatchToggleStar = (companyKeys: string[], star: boolean) => {
+    setStarredSet((prev) => {
+      const next = new Set(prev);
+      companyKeys.forEach((key) => {
+        if (star) next.add(key);
+        else next.delete(key);
+      });
+      try {
+        localStorage.setItem('linkbuilder_starred', JSON.stringify(Array.from(next)));
+      } catch {}
+      return next;
+    });
+    showToast(`${star ? 'Starred' : 'Unstarred'} ${companyKeys.length} companies!`);
+  };
+
   const handleUpdateNotes = (companyKey: string, noteText: string) => {
     setNotesMap((prev) => {
       const next = { ...prev, [companyKey]: noteText };
@@ -70,6 +104,31 @@ export default function Home() {
       } catch {}
       return next;
     });
+  };
+
+  const handleUpdateOutreachStatus = (companyKey: string, status: OutreachStatus) => {
+    setOutreachMap((prev) => {
+      const next = { ...prev, [companyKey]: status };
+      try {
+        localStorage.setItem('linkbuilder_outreach_status', JSON.stringify(next));
+      } catch {}
+      return next;
+    });
+    showToast(`Status updated to ${status.replace('_', ' ')}!`);
+  };
+
+  const handleBatchUpdateOutreachStatus = (companyKeys: string[], status: OutreachStatus) => {
+    setOutreachMap((prev) => {
+      const next = { ...prev };
+      companyKeys.forEach((key) => {
+        next[key] = status;
+      });
+      try {
+        localStorage.setItem('linkbuilder_outreach_status', JSON.stringify(next));
+      } catch {}
+      return next;
+    });
+    showToast(`Updated ${companyKeys.length} companies to "${status.replace('_', ' ')}"!`);
   };
 
   // Global '?' key listener for Keyboard Shortcuts
@@ -101,15 +160,49 @@ export default function Home() {
   };
 
   const handleCompanyAddedToDb = (newComp: CompanyRecord) => {
-    setCompanies((prev) => {
+    setCustomCompanies((prev) => {
       const filtered = prev.filter((c) => c.name.toLowerCase() !== newComp.name.toLowerCase());
-      return [newComp, ...filtered];
+      const next = [newComp, ...filtered];
+      try {
+        localStorage.setItem('linkbuilder_custom_companies', JSON.stringify(next));
+      } catch {}
+      return next;
     });
+    showToast(`Added ${newComp.name} to persistent catalog!`);
+  };
+
+  const handleBatchCompaniesAddedToDb = (newComps: CompanyRecord[]) => {
+    setCustomCompanies((prev) => {
+      const names = new Set(newComps.map((c) => c.name.toLowerCase()));
+      const filtered = prev.filter((c) => !names.has(c.name.toLowerCase()));
+      const next = [...newComps, ...filtered];
+      try {
+        localStorage.setItem('linkbuilder_custom_companies', JSON.stringify(next));
+      } catch {}
+      return next;
+    });
+    showToast(`Saved ${newComps.length} companies to persistent catalog!`);
   };
 
   const handleOpenExplorer = (company: CompanyRecord) => {
     setSelectedCompanyForExplorer(company);
     setIsExplorerOpen(true);
+  };
+
+  const handleDataRestored = () => {
+    try {
+      const savedStarred = localStorage.getItem('linkbuilder_starred');
+      if (savedStarred) setStarredSet(new Set(JSON.parse(savedStarred)));
+
+      const savedNotes = localStorage.getItem('linkbuilder_company_notes');
+      if (savedNotes) setNotesMap(JSON.parse(savedNotes));
+
+      const savedCustom = localStorage.getItem('linkbuilder_custom_companies');
+      if (savedCustom) setCustomCompanies(JSON.parse(savedCustom));
+
+      const savedStatus = localStorage.getItem('linkbuilder_outreach_status');
+      if (savedStatus) setOutreachMap(JSON.parse(savedStatus));
+    } catch {}
   };
 
   const totalCategories = useMemo(() => {
@@ -133,6 +226,7 @@ export default function Home() {
         totalCategories={totalCategories}
         onOpenFirebaseModal={() => setIsFirebaseModalOpen(true)}
         onOpenShortcuts={() => setIsShortcutsOpen(true)}
+        onOpenBackupModal={() => setIsBackupModalOpen(true)}
       />
 
       {/* Main Content Area */}
@@ -145,8 +239,12 @@ export default function Home() {
             onExploreCompany={handleOpenExplorer}
             starredSet={starredSet}
             onToggleStar={handleToggleStar}
+            onBatchToggleStar={handleBatchToggleStar}
             notesMap={notesMap}
             onUpdateNotes={handleUpdateNotes}
+            outreachMap={outreachMap}
+            onUpdateOutreachStatus={handleUpdateOutreachStatus}
+            onBatchUpdateOutreachStatus={handleBatchUpdateOutreachStatus}
           />
         ) : (
           <WorkspaceView
@@ -154,11 +252,14 @@ export default function Home() {
             onNotify={showToast}
             preloadedNames={preloadedNames}
             onCompanyAddedToDb={handleCompanyAddedToDb}
+            onBatchCompaniesAddedToDb={handleBatchCompaniesAddedToDb}
             onExploreCompany={handleOpenExplorer}
             starredSet={starredSet}
             onToggleStar={handleToggleStar}
             notesMap={notesMap}
             onUpdateNotes={handleUpdateNotes}
+            outreachMap={outreachMap}
+            onUpdateOutreachStatus={handleUpdateOutreachStatus}
           />
         )}
       </div>
@@ -169,10 +270,36 @@ export default function Home() {
         isOpen={isExplorerOpen}
         onClose={() => setIsExplorerOpen(false)}
         onNotify={showToast}
-        isStarred={selectedCompanyForExplorer ? starredSet.has(selectedCompanyForExplorer.slug || selectedCompanyForExplorer.name) : false}
-        onToggleStar={() => selectedCompanyForExplorer && handleToggleStar(selectedCompanyForExplorer.slug || selectedCompanyForExplorer.name)}
-        notes={selectedCompanyForExplorer ? notesMap[selectedCompanyForExplorer.slug || selectedCompanyForExplorer.name] || '' : ''}
-        onSaveNotes={(n) => selectedCompanyForExplorer && handleUpdateNotes(selectedCompanyForExplorer.slug || selectedCompanyForExplorer.name, n)}
+        isStarred={
+          selectedCompanyForExplorer
+            ? starredSet.has(selectedCompanyForExplorer.slug || selectedCompanyForExplorer.name)
+            : false
+        }
+        onToggleStar={() =>
+          selectedCompanyForExplorer &&
+          handleToggleStar(selectedCompanyForExplorer.slug || selectedCompanyForExplorer.name)
+        }
+        notes={
+          selectedCompanyForExplorer
+            ? notesMap[selectedCompanyForExplorer.slug || selectedCompanyForExplorer.name] || ''
+            : ''
+        }
+        onSaveNotes={(n) =>
+          selectedCompanyForExplorer &&
+          handleUpdateNotes(selectedCompanyForExplorer.slug || selectedCompanyForExplorer.name, n)
+        }
+        outreachStatus={
+          selectedCompanyForExplorer
+            ? outreachMap[selectedCompanyForExplorer.slug || selectedCompanyForExplorer.name] || 'to_contact'
+            : 'to_contact'
+        }
+        onUpdateOutreachStatus={(status) =>
+          selectedCompanyForExplorer &&
+          handleUpdateOutreachStatus(
+            selectedCompanyForExplorer.slug || selectedCompanyForExplorer.name,
+            status
+          )
+        }
       />
 
       {/* Firebase Info Modal */}
@@ -186,6 +313,20 @@ export default function Home() {
       <KeyboardShortcutsModal
         isOpen={isShortcutsOpen}
         onClose={() => setIsShortcutsOpen(false)}
+      />
+
+      {/* Data Backup & Restore Modal */}
+      <DataBackupModal
+        isOpen={isBackupModalOpen}
+        onClose={() => setIsBackupModalOpen(false)}
+        onNotify={showToast}
+        onDataRestored={handleDataRestored}
+        metrics={{
+          starredCount: starredSet.size,
+          notesCount: Object.keys(notesMap).filter((k) => notesMap[k]?.trim()).length,
+          statusCount: Object.keys(outreachMap).length,
+          customCompaniesCount: customCompanies.length,
+        }}
       />
 
       {/* Floating Toast Notifications with ARIA live announcement */}
