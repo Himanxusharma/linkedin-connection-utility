@@ -1,0 +1,12 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Companies directory: allow public reads, allow writes for crowdsourced additions
+    match /companies/{companyId} {
+      allow read: if true;
+      allow create, update: if request.resource.data.name is string 
+                            && request.resource.data.slug is string;
+      allow delete: if false; // protect directory from accidental deletions
+    }
+  }
+}

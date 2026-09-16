@@ -1,0 +1,43 @@
+export type OutreachStatus =
+  | 'to_contact'
+  | 'reviewed'
+  | 'contacted'
+  | 'applied'
+  | 'connected';
+
+export interface CompanyRecord {
+  id: string;
+  rank?: number;
+  name: string;
+  slug: string;
+  category: string;
+  linkedInUrl?: string;
+  careersUrl?: string;
+  website?: string;
+  verified: boolean;
+  source?: string;
+  updatedAt?: string;
+  outreachStatus?: OutreachStatus;
+}
+
+export type VerificationStatus = 'verified' | 'guess';
+
+export interface WorkspaceRow {
+  id: string;
+  companyName: string;
+  slug: string;
+  status: VerificationStatus;
+  category?: string;
+  peopleLink: string;
+  jobsLink: string;
+  careersLink?: string;
+  searchUrl: string;
+  isCustomSlug?: boolean;
+  outreachStatus?: OutreachStatus;
+}
+
+export interface TargetRoleOption {
+  id: string;
+  label: string;
+  keyword: string;
+}
