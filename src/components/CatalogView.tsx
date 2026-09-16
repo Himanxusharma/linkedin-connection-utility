@@ -40,6 +40,7 @@ import {
   buildGoogleSearchUrl,
   TARGET_ROLE_OPTIONS,
 } from '../lib/slug-heuristics';
+import { LinkOpenMode, getLinkTargetAttribute, openOutreachUrl } from '../lib/navigation';
 import { OutreachMessageModal } from './OutreachMessageModal';
 import { SpeedRunRunnerModal } from './SpeedRunRunnerModal';
 
@@ -56,6 +57,9 @@ interface CatalogViewProps {
   outreachMap?: Record<string, OutreachStatus>;
   onUpdateOutreachStatus?: (companyKey: string, status: OutreachStatus) => void;
   onBatchUpdateOutreachStatus?: (companyKeys: string[], status: OutreachStatus) => void;
+  linkOpenMode?: LinkOpenMode;
+  onOpenUrl?: (url: string, company?: CompanyRecord) => void;
+  activeCompanionSlug?: string;
 }
 
 type SortField = 'rank' | 'name' | 'category' | 'status';
@@ -74,6 +78,9 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
   outreachMap: propOutreachMap,
   onUpdateOutreachStatus,
   onBatchUpdateOutreachStatus,
+  linkOpenMode = 'companion',
+  onOpenUrl,
+  activeCompanionSlug,
 }) => {
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -169,6 +176,15 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
         // ignore
       }
       onNotify(`Status updated to ${status.replace('_', ' ')}!`);
+    }
+  };
+
+  const handleNavigateUrl = (e: React.MouseEvent, url: string, company: CompanyRecord) => {
+    if (e) e.preventDefault();
+    if (onOpenUrl) {
+      onOpenUrl(url, company);
+    } else {
+      openOutreachUrl(url, { mode: linkOpenMode, companyName: company.name });
     }
   };
 
@@ -399,11 +415,20 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
 
   const openBatchInTabs = (records: CompanyRecord[]) => {
     const batch = records.slice(0, 5);
-    batch.forEach((c) => {
-      const url = buildPeopleUrl(c.slug, currentRoleKeyword);
-      window.open(url, '_blank');
-    });
-    onNotify(`Opened ${batch.length} company People tabs!`);
+    if (batch.length === 0) return;
+
+    if (linkOpenMode === 'companion') {
+      const first = batch[0];
+      const url = buildPeopleUrl(first.slug, currentRoleKeyword);
+      handleNavigateUrl(null as unknown as React.MouseEvent, url, first);
+      onNotify(`Loaded ${first.name} into Companion Window!`);
+    } else {
+      batch.forEach((c) => {
+        const url = buildPeopleUrl(c.slug, currentRoleKeyword);
+        openOutreachUrl(url, { mode: linkOpenMode, companyName: c.name });
+      });
+      onNotify(`Opened ${batch.length} companies!`);
+    }
   };
 
   const handleSendSelectedToWorkspace = () => {
@@ -1169,7 +1194,12 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
                   <tr
                     key={rowId}
                     style={{
-                      backgroundColor: isSelected ? 'rgba(99, 102, 241, 0.08)' : 'transparent',
+                      backgroundColor: isSelected
+                        ? 'rgba(99, 102, 241, 0.08)'
+                        : activeCompanionSlug === c.slug
+                        ? 'rgba(56, 189, 248, 0.12)'
+                        : 'transparent',
+                      boxShadow: activeCompanionSlug === c.slug ? 'inset 3px 0 0 #38bdf8' : undefined,
                     }}
                   >
                     <td style={{ textAlign: 'center' }}>
@@ -1228,7 +1258,8 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginTop: '4px' }}>
                           <a
                             href={googleSearch}
-                            target="_blank"
+                            onClick={(e) => handleNavigateUrl(e, googleSearch, c)}
+                            target={getLinkTargetAttribute(linkOpenMode)}
                             rel="noreferrer"
                             className="action-link-search"
                             style={{ fontSize: '0.7rem', padding: '0.12rem 0.4rem' }}
@@ -1303,7 +1334,8 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                         <a
                           href={peopleUrl}
-                          target="_blank"
+                          onClick={(e) => handleNavigateUrl(e, peopleUrl, c)}
+                          target={getLinkTargetAttribute(linkOpenMode)}
                           rel="noreferrer"
                           className="action-link"
                           title={`Open People page on LinkedIn${currentRoleKeyword ? ` (filtered to ${currentRoleKeyword})` : ''}`}
@@ -1324,7 +1356,8 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                         <a
                           href={jobsUrl}
-                          target="_blank"
+                          onClick={(e) => handleNavigateUrl(e, jobsUrl, c)}
+                          target={getLinkTargetAttribute(linkOpenMode)}
                           rel="noreferrer"
                           className="action-link"
                           title="Open Jobs page on LinkedIn"
@@ -1346,7 +1379,8 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                           <a
                             href={c.careersUrl}
-                            target="_blank"
+                            onClick={(e) => handleNavigateUrl(e, c.careersUrl!, c)}
+                            target={getLinkTargetAttribute(linkOpenMode)}
                             rel="noreferrer"
                             className="action-link action-link-careers"
                             title="Open company careers portal"
@@ -1392,6 +1426,7 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
         onUpdateStatus={handleUpdateStatus}
         onNotify={onNotify}
         initialRoleId={selectedRoleId}
+        linkOpenMode={linkOpenMode}
       />
     </div>
   );

@@ -8,7 +8,10 @@ import { CompanyExplorerDrawer } from '../components/CompanyExplorerDrawer';
 import { FirebaseModal } from '../components/FirebaseModal';
 import { KeyboardShortcutsModal } from '../components/KeyboardShortcutsModal';
 import { DataBackupModal } from '../components/DataBackupModal';
+import { CompanionDock } from '../components/CompanionDock';
+import { OutreachMessageModal } from '../components/OutreachMessageModal';
 import { CompanyRecord, OutreachStatus } from '../types/company';
+import { LinkOpenMode, getSavedLinkOpenMode, saveLinkOpenMode, openOutreachUrl } from '../lib/navigation';
 import seedCompanies from '../data/seed-companies.json';
 import { CheckCircle, ShieldAlert } from 'lucide-react';
 
@@ -28,6 +31,14 @@ export default function Home() {
   const [isBackupModalOpen, setIsBackupModalOpen] = useState<boolean>(false);
   const [toasts, setToasts] = useState<ToastItem[]>([]);
 
+  // Outreach link open mode (companion | reusable-tab | new-tab)
+  const [linkOpenMode, setLinkOpenMode] = useState<LinkOpenMode>('companion');
+  const [activeCompanionCompany, setActiveCompanionCompany] = useState<CompanyRecord | null>(null);
+
+  // Global Outreach Note Modal
+  const [messageModalCompany, setMessageModalCompany] = useState<CompanyRecord | null>(null);
+  const [isMessageModalOpen, setIsMessageModalOpen] = useState<boolean>(false);
+
   // Starred / Bookmarked Companies state
   const [starredSet, setStarredSet] = useState<Set<string>>(new Set());
 
@@ -37,9 +48,11 @@ export default function Home() {
   // Global Outreach Status map for active syncing
   const [outreachMap, setOutreachMap] = useState<Record<string, OutreachStatus>>({});
 
-  // Load Starred, Notes, Custom Companies, and Outreach Status on mount
+  // Load Starred, Notes, Custom Companies, Outreach Status, and Link Mode on mount
   useEffect(() => {
     try {
+      setLinkOpenMode(getSavedLinkOpenMode());
+
       const savedStarred = localStorage.getItem('linkbuilder_starred');
       if (savedStarred) setStarredSet(new Set(JSON.parse(savedStarred)));
 
@@ -205,6 +218,25 @@ export default function Home() {
     } catch {}
   };
 
+  const handleChangeLinkOpenMode = (mode: LinkOpenMode) => {
+    setLinkOpenMode(mode);
+    saveLinkOpenMode(mode);
+    showToast(
+      mode === 'companion'
+        ? '🖥️ Switched to Split Companion Window'
+        : mode === 'reusable-tab'
+        ? '📑 Switched to 1 Reusable Tab'
+        : '🗂️ Switched to Classic New Tabs'
+    );
+  };
+
+  const handleOpenOutreachUrl = (url: string, company?: CompanyRecord) => {
+    if (company) {
+      setActiveCompanionCompany(company);
+    }
+    openOutreachUrl(url, { mode: linkOpenMode, companyName: company?.name });
+  };
+
   const totalCategories = useMemo(() => {
     const set = new Set<string>();
     companies.forEach((c) => {
@@ -217,7 +249,7 @@ export default function Home() {
   }, [companies]);
 
   return (
-    <main style={{ minHeight: '100vh', paddingBottom: '4rem' }}>
+    <main style={{ minHeight: '100vh', paddingBottom: '5rem' }}>
       {/* App Header */}
       <Header
         activeTab={activeTab}
@@ -227,6 +259,8 @@ export default function Home() {
         onOpenFirebaseModal={() => setIsFirebaseModalOpen(true)}
         onOpenShortcuts={() => setIsShortcutsOpen(true)}
         onOpenBackupModal={() => setIsBackupModalOpen(true)}
+        linkOpenMode={linkOpenMode}
+        onChangeLinkOpenMode={handleChangeLinkOpenMode}
       />
 
       {/* Main Content Area */}
@@ -245,6 +279,9 @@ export default function Home() {
             outreachMap={outreachMap}
             onUpdateOutreachStatus={handleUpdateOutreachStatus}
             onBatchUpdateOutreachStatus={handleBatchUpdateOutreachStatus}
+            linkOpenMode={linkOpenMode}
+            onOpenUrl={handleOpenOutreachUrl}
+            activeCompanionSlug={activeCompanionCompany?.slug}
           />
         ) : (
           <WorkspaceView
@@ -260,6 +297,8 @@ export default function Home() {
             onUpdateNotes={handleUpdateNotes}
             outreachMap={outreachMap}
             onUpdateOutreachStatus={handleUpdateOutreachStatus}
+            linkOpenMode={linkOpenMode}
+            onOpenUrl={handleOpenOutreachUrl}
           />
         )}
       </div>
@@ -300,6 +339,47 @@ export default function Home() {
             status
           )
         }
+        linkOpenMode={linkOpenMode}
+        onOpenUrl={handleOpenOutreachUrl}
+      />
+
+      {/* Floating Companion Controller Dock */}
+      {activeCompanionCompany && (
+        <CompanionDock
+          activeCompany={activeCompanionCompany}
+          allCompanies={companies}
+          onSelectCompany={(comp) => {
+            setActiveCompanionCompany(comp);
+          }}
+          outreachStatus={
+            activeCompanionCompany
+              ? outreachMap[activeCompanionCompany.slug || activeCompanionCompany.name] || 'to_contact'
+              : 'to_contact'
+          }
+          onUpdateStatus={(st) => {
+            if (activeCompanionCompany) {
+              handleUpdateOutreachStatus(
+                activeCompanionCompany.slug || activeCompanionCompany.name,
+                st
+              );
+            }
+          }}
+          onOpenMessageModal={(c) => {
+            setMessageModalCompany(c);
+            setIsMessageModalOpen(true);
+          }}
+          onNotify={showToast}
+          linkOpenMode={linkOpenMode}
+          onCloseDock={() => setActiveCompanionCompany(null)}
+        />
+      )}
+
+      {/* Shared Connection Note Customizer Modal */}
+      <OutreachMessageModal
+        company={messageModalCompany}
+        isOpen={isMessageModalOpen}
+        onClose={() => setIsMessageModalOpen(false)}
+        onNotify={showToast}
       />
 
       {/* Firebase Info Modal */}

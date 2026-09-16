@@ -12,8 +12,10 @@ import {
   Zap,
   Keyboard,
   HardDrive,
+  AppWindow,
 } from 'lucide-react';
 import { isFirebaseConfigured } from '../lib/firebase';
+import { LinkOpenMode } from '../lib/navigation';
 
 interface HeaderProps {
   activeTab: 'catalog' | 'workspace';
@@ -23,6 +25,8 @@ interface HeaderProps {
   onOpenFirebaseModal: () => void;
   onOpenShortcuts?: () => void;
   onOpenBackupModal?: () => void;
+  linkOpenMode?: LinkOpenMode;
+  onChangeLinkOpenMode?: (mode: LinkOpenMode) => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -33,6 +37,8 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenFirebaseModal,
   onOpenShortcuts,
   onOpenBackupModal,
+  linkOpenMode = 'companion',
+  onChangeLinkOpenMode,
 }) => {
   const isCloud = isFirebaseConfigured();
 
@@ -192,6 +198,48 @@ export const Header: React.FC<HeaderProps> = ({
                 <HardDrive size={15} color="#10b981" />
                 <span>Backup & Sync</span>
               </button>
+            )}
+
+            {/* Link Opening Mode Selector */}
+            {onChangeLinkOpenMode && (
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.35rem',
+                  padding: '0.35rem 0.65rem',
+                  borderRadius: 'var(--radius-md)',
+                  backgroundColor: 'rgba(15, 23, 42, 0.85)',
+                  border: '1px solid rgba(56, 189, 248, 0.35)',
+                }}
+                title="Choose how links open: Split Companion window, 1 Reusable Tab, or New Tabs"
+              >
+                <AppWindow size={14} color="#38bdf8" />
+                <select
+                  value={linkOpenMode}
+                  onChange={(e) => onChangeLinkOpenMode(e.target.value as LinkOpenMode)}
+                  aria-label="Link opening mode"
+                  style={{
+                    background: 'transparent',
+                    border: 'none',
+                    color: 'var(--text-primary)',
+                    fontSize: '0.78rem',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    outline: 'none',
+                  }}
+                >
+                  <option value="companion" style={{ backgroundColor: '#0f172a', color: '#f8fafc' }}>
+                    🖥️ Companion (Split)
+                  </option>
+                  <option value="reusable-tab" style={{ backgroundColor: '#0f172a', color: '#f8fafc' }}>
+                    📑 1 Reusable Tab
+                  </option>
+                  <option value="new-tab" style={{ backgroundColor: '#0f172a', color: '#f8fafc' }}>
+                    🗂️ New Tabs
+                  </option>
+                </select>
+              </div>
             )}
           </div>
         </div>

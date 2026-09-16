@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import { CompanyRecord, OutreachStatus } from '../types/company';
 import { buildPeopleUrl, buildJobsUrl, buildGoogleSearchUrl } from '../lib/slug-heuristics';
+import { LinkOpenMode, getLinkTargetAttribute, openOutreachUrl } from '../lib/navigation';
 
 interface CompanyExplorerDrawerProps {
   company: CompanyRecord | null;
@@ -33,6 +34,8 @@ interface CompanyExplorerDrawerProps {
   onSaveNotes?: (notes: string) => void;
   outreachStatus?: OutreachStatus;
   onUpdateOutreachStatus?: (status: OutreachStatus) => void;
+  linkOpenMode?: LinkOpenMode;
+  onOpenUrl?: (url: string, company?: CompanyRecord) => void;
 }
 
 type TabType = 'people' | 'jobs' | 'careers' | 'iframe';
@@ -48,6 +51,8 @@ export const CompanyExplorerDrawer: React.FC<CompanyExplorerDrawerProps> = ({
   onSaveNotes,
   outreachStatus = 'to_contact',
   onUpdateOutreachStatus,
+  linkOpenMode = 'companion',
+  onOpenUrl,
 }) => {
   const [activeTab, setActiveTab] = useState<TabType>('people');
   const [copiedUrl, setCopiedUrl] = useState<boolean>(false);
@@ -85,20 +90,16 @@ export const CompanyExplorerDrawer: React.FC<CompanyExplorerDrawerProps> = ({
   const activeUrl = getActiveUrl();
 
   /**
-   * Opens the targeted URL in a dedicated companion window.
-   * Targeting 'LinkBuilderCompanion' ensures subsequent clicks update the same window!
+   * Opens the targeted URL in the active companion mode.
+   * Reuses the single companion window or tab without creating tab sprawl!
    */
   const openCompanionWindow = (url: string) => {
-    const width = 1100;
-    const height = 850;
-    const left = window.screen.width - width - 50;
-    const top = 60;
-    window.open(
-      url,
-      'LinkBuilderCompanion',
-      `width=${width},height=${height},left=${left},top=${top},menubar=no,toolbar=no,location=yes,status=no,resizable=yes,scrollbars=yes`
-    );
-    onNotify(`Opened ${company.name} in Companion Window!`);
+    if (onOpenUrl) {
+      onOpenUrl(url, company);
+    } else {
+      openOutreachUrl(url, { mode: linkOpenMode, companyName: company.name });
+    }
+    onNotify(`Loaded ${company.name} in Companion Window!`);
   };
 
   const copyCurrentUrl = async () => {
@@ -387,12 +388,18 @@ export const CompanyExplorerDrawer: React.FC<CompanyExplorerDrawerProps> = ({
             </button>
             <a
               href={activeUrl}
-              target="_blank"
+              target={getLinkTargetAttribute(linkOpenMode)}
+              onClick={(e) => {
+                if (linkOpenMode !== 'new-tab') {
+                  e.preventDefault();
+                  openCompanionWindow(activeUrl);
+                }
+              }}
               rel="noreferrer"
               className="btn btn-secondary"
               style={{ padding: '0.35rem 0.75rem', fontSize: '0.75rem' }}
             >
-              <ExternalLink size={13} /> Open Tab
+              <ExternalLink size={13} /> {linkOpenMode === 'companion' ? 'Open Companion' : linkOpenMode === 'reusable-tab' ? 'Open In Workstation' : 'Open Tab'}
             </a>
           </div>
         </div>
@@ -521,10 +528,12 @@ export const CompanyExplorerDrawer: React.FC<CompanyExplorerDrawerProps> = ({
                       </button>
                       <a
                         href={peopleUrl}
-                        target="_blank"
+                        onClick={(e) => { e.preventDefault(); openCompanionWindow(peopleUrl); }}
+                        target={getLinkTargetAttribute(linkOpenMode)}
                         rel="noreferrer"
                         className="btn btn-secondary"
                         style={{ fontSize: '0.775rem', padding: '0.45rem 0.75rem' }}
+                        title="Open People in Companion Workstation"
                       >
                         <ExternalLink size={13} />
                       </a>
@@ -559,10 +568,12 @@ export const CompanyExplorerDrawer: React.FC<CompanyExplorerDrawerProps> = ({
                       </button>
                       <a
                         href={jobsUrl}
-                        target="_blank"
+                        onClick={(e) => { e.preventDefault(); openCompanionWindow(jobsUrl); }}
+                        target={getLinkTargetAttribute(linkOpenMode)}
                         rel="noreferrer"
                         className="btn btn-secondary"
                         style={{ fontSize: '0.775rem', padding: '0.45rem 0.75rem' }}
+                        title="Open Jobs in Companion Workstation"
                       >
                         <ExternalLink size={13} />
                       </a>
@@ -600,10 +611,12 @@ export const CompanyExplorerDrawer: React.FC<CompanyExplorerDrawerProps> = ({
                         </button>
                         <a
                           href={careersUrl}
-                          target="_blank"
+                          onClick={(e) => { e.preventDefault(); openCompanionWindow(careersUrl); }}
+                          target={getLinkTargetAttribute(linkOpenMode)}
                           rel="noreferrer"
                           className="btn btn-secondary"
                           style={{ fontSize: '0.775rem', padding: '0.45rem 0.75rem' }}
+                          title="Open Careers in Companion Workstation"
                         >
                           <ExternalLink size={13} />
                         </a>
@@ -632,7 +645,8 @@ export const CompanyExplorerDrawer: React.FC<CompanyExplorerDrawerProps> = ({
                     <div style={{ display: 'flex', gap: '0.5rem', marginTop: 'auto' }}>
                       <a
                         href={searchUrl}
-                        target="_blank"
+                        onClick={(e) => { e.preventDefault(); openCompanionWindow(searchUrl); }}
+                        target={getLinkTargetAttribute(linkOpenMode)}
                         rel="noreferrer"
                         className="btn btn-secondary"
                         style={{ flex: 1, fontSize: '0.775rem', padding: '0.45rem' }}

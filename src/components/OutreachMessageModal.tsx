@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { CompanyRecord } from '../types/company';
 import { buildPeopleUrl } from '../lib/slug-heuristics';
+import { LinkOpenMode, openOutreachUrl, getLinkTargetAttribute } from '../lib/navigation';
 
 interface OutreachMessageModalProps {
   company: CompanyRecord | null;
@@ -23,6 +24,8 @@ interface OutreachMessageModalProps {
   onClose: () => void;
   onNotify: (msg: string) => void;
   targetRoleKeyword?: string;
+  linkOpenMode?: LinkOpenMode;
+  onOpenUrl?: (url: string, companyName?: string) => void;
 }
 
 interface TemplateOption {
@@ -38,6 +41,8 @@ export const OutreachMessageModal: React.FC<OutreachMessageModalProps> = ({
   onClose,
   onNotify,
   targetRoleKeyword,
+  linkOpenMode = 'companion',
+  onOpenUrl,
 }) => {
   const [selectedTemplate, setSelectedTemplate] = useState<string>('referral');
   const [userRole, setUserRole] = useState<string>('Software Engineer');
@@ -351,7 +356,17 @@ export const OutreachMessageModal: React.FC<OutreachMessageModalProps> = ({
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap' }}>
           <a
             href={peopleUrl}
-            target="_blank"
+            target={getLinkTargetAttribute(linkOpenMode)}
+            onClick={(e) => {
+              if (linkOpenMode !== 'new-tab') {
+                e.preventDefault();
+                if (onOpenUrl) {
+                  onOpenUrl(peopleUrl, company.name);
+                } else {
+                  openOutreachUrl(peopleUrl, { mode: linkOpenMode, companyName: company.name });
+                }
+              }
+            }}
             rel="noreferrer"
             className="btn btn-secondary"
             style={{ fontSize: '0.825rem' }}

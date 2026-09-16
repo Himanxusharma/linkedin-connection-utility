@@ -38,6 +38,7 @@ import {
   TARGET_ROLE_OPTIONS,
   KNOWN_COMPANY_SLUGS,
 } from '../lib/slug-heuristics';
+import { LinkOpenMode, getLinkTargetAttribute, openOutreachUrl } from '../lib/navigation';
 import { saveCompany } from '../lib/firebase';
 import { OutreachMessageModal } from './OutreachMessageModal';
 import { SpeedRunRunnerModal } from './SpeedRunRunnerModal';
@@ -56,6 +57,8 @@ interface WorkspaceViewProps {
   onUpdateNotes?: (companyKey: string, noteText: string) => void;
   outreachMap?: Record<string, OutreachStatus>;
   onUpdateOutreachStatus?: (companyKey: string, status: OutreachStatus) => void;
+  linkOpenMode?: LinkOpenMode;
+  onOpenUrl?: (url: string, company?: CompanyRecord) => void;
 }
 
 export const WorkspaceView: React.FC<WorkspaceViewProps> = ({
@@ -71,6 +74,8 @@ export const WorkspaceView: React.FC<WorkspaceViewProps> = ({
   onUpdateNotes,
   outreachMap: propOutreachMap,
   onUpdateOutreachStatus,
+  linkOpenMode = 'companion',
+  onOpenUrl,
 }) => {
   const [inputText, setInputText] = useState<string>('');
   const [rows, setRows] = useState<WorkspaceRow[]>([]);
@@ -385,6 +390,23 @@ export const WorkspaceView: React.FC<WorkspaceViewProps> = ({
       );
     } else {
       onNotify(`Failed to save ${row.companyName}`);
+    }
+  };
+
+  const handleNavigateUrl = (e: React.MouseEvent, url: string, row: WorkspaceRow) => {
+    if (e) e.preventDefault();
+    const compRecord: CompanyRecord = {
+      id: row.id,
+      name: row.companyName,
+      slug: row.slug,
+      category: row.category || 'Workspace',
+      verified: row.status === 'verified',
+      careersUrl: row.careersLink,
+    };
+    if (onOpenUrl) {
+      onOpenUrl(url, compRecord);
+    } else {
+      openOutreachUrl(url, { mode: linkOpenMode, companyName: row.companyName });
     }
   };
 
@@ -918,7 +940,8 @@ export const WorkspaceView: React.FC<WorkspaceViewProps> = ({
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                           <a
                             href={row.peopleLink}
-                            target="_blank"
+                            onClick={(e) => handleNavigateUrl(e, row.peopleLink, row)}
+                            target={getLinkTargetAttribute(linkOpenMode)}
                             rel="noreferrer"
                             className="action-link"
                             title={`Open People page on LinkedIn${currentRoleKeyword ? ` (${currentRoleKeyword})` : ''}`}
@@ -943,7 +966,8 @@ export const WorkspaceView: React.FC<WorkspaceViewProps> = ({
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                           <a
                             href={row.jobsLink}
-                            target="_blank"
+                            onClick={(e) => handleNavigateUrl(e, row.jobsLink, row)}
+                            target={getLinkTargetAttribute(linkOpenMode)}
                             rel="noreferrer"
                             className="action-link"
                             title="Open Jobs page on LinkedIn"
@@ -967,7 +991,8 @@ export const WorkspaceView: React.FC<WorkspaceViewProps> = ({
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
                         <a
                           href={row.searchUrl}
-                          target="_blank"
+                          onClick={(e) => handleNavigateUrl(e, row.searchUrl, row)}
+                          target={getLinkTargetAttribute(linkOpenMode)}
                           rel="noreferrer"
                           className="action-link action-link-search"
                           style={{ padding: '0.3rem 0.45rem' }}
@@ -1108,6 +1133,7 @@ export const WorkspaceView: React.FC<WorkspaceViewProps> = ({
         onUpdateStatus={handleUpdateStatus}
         onNotify={onNotify}
         initialRoleId={selectedRoleId}
+        linkOpenMode={linkOpenMode}
       />
 
       {/* AI Company List Prompt Generator Modal */}

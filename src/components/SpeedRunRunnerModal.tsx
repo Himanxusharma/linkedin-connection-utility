@@ -23,6 +23,7 @@ import {
   buildJobsUrl,
   TARGET_ROLE_OPTIONS,
 } from '../lib/slug-heuristics';
+import { LinkOpenMode, openOutreachUrl, getLinkTargetAttribute } from '../lib/navigation';
 
 interface SpeedRunRunnerModalProps {
   isOpen: boolean;
@@ -32,6 +33,7 @@ interface SpeedRunRunnerModalProps {
   onUpdateStatus: (companyKey: string, status: OutreachStatus) => void;
   onNotify: (msg: string) => void;
   initialRoleId?: string;
+  linkOpenMode?: LinkOpenMode;
 }
 
 type DestinationType = 'people' | 'jobs' | 'careers';
@@ -44,6 +46,7 @@ export const SpeedRunRunnerModal: React.FC<SpeedRunRunnerModalProps> = ({
   onUpdateStatus,
   onNotify,
   initialRoleId = 'recruiters',
+  linkOpenMode = 'companion',
 }) => {
   const [currentIndex, setCurrentIndex] = useState<number>(0);
   const [selectedRoleId, setSelectedRoleId] = useState<string>(initialRoleId);
@@ -99,23 +102,18 @@ export const SpeedRunRunnerModal: React.FC<SpeedRunRunnerModalProps> = ({
     return msg.slice(0, 300);
   }, [currentCompany, templateType, userRole]);
 
-  // Open / Update companion window
+  // Open / Update companion window or reusable tab
   const openOrUpdateCompanion = useCallback((url: string, notify = true) => {
     if (!url) return;
-    const width = 1100;
-    const height = 900;
-    const left = window.screen.width - width - 40;
-    const top = 50;
-
-    window.open(
-      url,
-      'LinkBuilderCompanion',
-      `width=${width},height=${height},left=${left},top=${top},menubar=no,toolbar=no,location=yes,status=no,resizable=yes,scrollbars=yes`
-    );
+    openOutreachUrl(url, {
+      mode: linkOpenMode,
+      companyName: currentCompany?.name,
+    });
     if (notify && currentCompany) {
-      onNotify(`Navigated companion window to ${currentCompany.name}!`);
+      const modeLabel = linkOpenMode === 'companion' ? 'companion window' : linkOpenMode === 'reusable-tab' ? 'reusable tab' : 'new tab';
+      onNotify(`Navigated ${modeLabel} to ${currentCompany.name}!`);
     }
-  }, [currentCompany, onNotify]);
+  }, [currentCompany, linkOpenMode, onNotify]);
 
   // Copy note to clipboard
   const copyNoteToClipboard = useCallback(async (notify = true) => {
@@ -446,7 +444,11 @@ export const SpeedRunRunnerModal: React.FC<SpeedRunRunnerModalProps> = ({
                   {currentCompany.careersUrl && (
                     <a
                       href={currentCompany.careersUrl}
-                      target="_blank"
+                      target={getLinkTargetAttribute(linkOpenMode)}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        openOrUpdateCompanion(currentCompany.careersUrl!, false);
+                      }}
                       rel="noreferrer"
                       style={{ fontSize: '0.75rem', color: '#94a3b8', display: 'flex', alignItems: 'center', gap: '3px', textDecoration: 'none' }}
                     >
