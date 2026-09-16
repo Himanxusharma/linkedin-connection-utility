@@ -37,44 +37,76 @@ export const AIPromptGeneratorModal: React.FC<AIPromptGeneratorModalProps> = ({
   const [location, setLocation] = useState<string>('India (Bengaluru, Mumbai, Delhi NCR)');
   const [customLocation, setCustomLocation] = useState<string>('');
   const [stage, setStage] = useState<string>('High-Growth Startups (Seed to Series B)');
-  const [count, setCount] = useState<number>(30);
+  const [listSizeOption, setListSizeOption] = useState<string>('30');
+  const [customListSize, setCustomListSize] = useState<string>('40');
   const [targetRole, setTargetRole] = useState<string>('Software Engineers & Tech Leads');
+  const [customTargetRole, setCustomTargetRole] = useState<string>('');
+  const [pureProductOnly, setPureProductOnly] = useState<boolean>(true);
   const [copied, setCopied] = useState<boolean>(false);
 
   const finalIndustry = industry === 'Custom' ? (customIndustry.trim() || 'Tech Startups') : industry;
   const finalLocation = location === 'Custom' ? (customLocation.trim() || 'Global') : location;
+  const finalTargetRole = targetRole === 'Custom' ? (customTargetRole.trim() || 'Software Engineers') : targetRole;
 
-  // Master Anti-Hallucination Prompt Generator
+  // Effective company count (custom or preset)
+  const effectiveCount = useMemo(() => {
+    if (listSizeOption === 'Custom') {
+      const parsed = parseInt(customListSize, 10);
+      if (isNaN(parsed) || parsed < 1) return 30;
+      return Math.min(parsed, 200); // capped at 200 to prevent LLM context overflows
+    }
+    return parseInt(listSizeOption, 10) || 30;
+  }, [listSizeOption, customListSize]);
+
+  // Master Anti-Hallucination & Verified Slug Prompt Generator
   const generatedPrompt = useMemo(() => {
-    return `You are a specialized corporate research and talent sourcing AI. Generate a verified list of ${count} ${stage.toLowerCase()} companies in the "${finalIndustry}" sector based in or hiring across "${finalLocation}".
+    return `You are a specialized corporate research and talent sourcing AI. Generate a verified, exhaustive list of EXACTLY ${effectiveCount} distinct companies in the "${finalIndustry}" sector based in or hiring across "${finalLocation}".
 
-OUTPUT SPECIFICATIONS (CRITICAL):
-1. Format: Output ONLY raw CSV inside a single \`\`\`csv code block. Do NOT write any conversational intro, greeting, or summary text.
-2. Exact CSV Header Row:
+TARGET PROFILE & PARAMETERS:
+- Sector / Domain: ${finalIndustry}
+- Geographic Focus: ${finalLocation}
+- Growth Stage: ${stage}
+- Primary Hiring Persona: ${finalTargetRole}
+${pureProductOnly ? '- Company Classification: Pure-play product & technology innovators ONLY (strictly NO IT services, staffing agencies, body shops, or general outsourcing consultancies).' : ''}
+
+OUTPUT SPECIFICATIONS (STRICT & CRITICAL):
+1. Raw CSV Only: Output ONLY valid raw CSV formatted inside a single \`\`\`csv code block. Do NOT write any conversational intro, greeting, preambles, or postscript explanations (e.g. do not write "Here is the list...").
+2. Exact 5-Column CSV Header Row:
 Company,Category,Slug,LinkedIn URL,Careers URL
 
-3. ZERO TRACKING PARAMETERS (STRICT):
-Never append tracking queries like "?utm_source=chatgpt.com", "?trk=...", or query strings to any URL. Every URL must be a clean, canonical URL ending with a trailing slash (e.g. "https://www.linkedin.com/company/stripe/").
+3. ZERO TRACKING PARAMETERS (STRICT ENFORCEMENT):
+- NEVER append tracking queries like "?utm_source=chatgpt.com", "?utm_medium=...", "?trk=...", or query strings to any URL.
+- Every URL must be a clean, canonical URL ending with a trailing slash (e.g. "https://www.linkedin.com/company/stripe/").
 
-4. VERIFIED LINKEDIN COMPANY SLUGS ONLY (NO HALLUCINATIONS):
-You must output the real registered LinkedIn company slug, not an assumed or simplified abbreviation. For example:
-- CRED's official slug is "credapp" (https://www.linkedin.com/company/credapp/), NOT "cred".
-- OneCard's official slug is "fpl-technologies" (https://www.linkedin.com/company/fpl-technologies/), NOT "onecard".
-- PhonePe's official slug is "phonepe-internet" (https://www.linkedin.com/company/phonepe-internet/), NOT "phonepe".
-- Zepto's official slug is "zeptonow" (https://www.linkedin.com/company/zeptonow/), NOT "zepto".
-- Groww's official slug is "groww.in" (https://www.linkedin.com/company/groww.in/), NOT "groww".
-- Stripe's official slug is "stripe" (https://www.linkedin.com/company/stripe/).
+4. VERIFIED REGISTERED LINKEDIN SLUGS (ZERO HALLUCINATIONS):
+You must output the real registered LinkedIn company URL slug, NOT an assumed name or generic abbreviation.
+Real-world Slug Accuracy Benchmarks:
+• CRED -> Official registered slug is "credapp" (https://www.linkedin.com/company/credapp/) [NOT "cred"]
+• OneCard -> Official registered slug is "fpl-technologies" (https://www.linkedin.com/company/fpl-technologies/) [NOT "onecard"]
+• PhonePe -> Official registered slug is "phonepe-internet" (https://www.linkedin.com/company/phonepe-internet/) [NOT "phonepe"]
+• Zepto -> Official registered slug is "zeptonow" (https://www.linkedin.com/company/zeptonow/) [NOT "zepto"]
+• Groww -> Official registered slug is "groww.in" (https://www.linkedin.com/company/groww.in/) [NOT "groww"]
+• Swiggy -> Official registered slug is "swiggy-in" (https://www.linkedin.com/company/swiggy-in/) [NOT "swiggy"]
+• Postman -> Official registered slug is "postman-platform" (https://www.linkedin.com/company/postman-platform/) [NOT "postman"]
+• Razorpay -> Official registered slug is "razorpay" (https://www.linkedin.com/company/razorpay/)
+• Zerodha -> Official registered slug is "zerodha" (https://www.linkedin.com/company/zerodha/)
+• Stripe -> Official registered slug is "stripe" (https://www.linkedin.com/company/stripe/)
+• Datadog -> Official registered slug is "datadog" (https://www.linkedin.com/company/datadog/)
+• Snowflake -> Official registered slug is "snowflake-computing" (https://www.linkedin.com/company/snowflake-computing/) [NOT "snowflake"]
 
-5. CAREERS URL: Provide the company's official job portal or ATS career page (e.g. "https://careers.company.com/"). If unknown, leave blank.
+5. OFFICIAL CAREERS PORTAL:
+Provide the company's official job portal or ATS career page (e.g. "https://careers.company.com/" or Greenhouse / Lever / Ashby / Workday portal). If unverified, leave the field empty. NEVER generate dummy or placeholder URLs (such as "https://careers.example.com") and never write "N/A" or "None".
 
-6. TARGET RELEVANCE: Ensure each company is actively operating in ${finalIndustry} and currently hiring ${targetRole}.
+6. COMPLETENESS & DATA INTEGRITY:
+- Provide all ${effectiveCount} rows without stopping halfway or omitting entries.
+- If a company name contains a comma, enclose the name in double quotes (e.g., "Example, Inc.").
 
-Example Row Format:
+Example Format:
 Stripe,Fintech,stripe,https://www.linkedin.com/company/stripe/,https://stripe.com/jobs
 CRED,Fintech,credapp,https://www.linkedin.com/company/credapp/,https://careers.cred.club/
 
-Generate the ${count} companies now in strict CSV:`;
-  }, [count, stage, finalIndustry, finalLocation, targetRole]);
+Generate all ${effectiveCount} verified companies now in strict CSV:`;
+  }, [effectiveCount, stage, finalIndustry, finalLocation, finalTargetRole, pureProductOnly]);
 
   if (!isOpen) return null;
 
@@ -82,7 +114,7 @@ Generate the ${count} companies now in strict CSV:`;
     try {
       await navigator.clipboard.writeText(generatedPrompt);
       setCopied(true);
-      if (notify) onNotify('📋 AI Prompt copied to clipboard! Paste into ChatGPT, Gemini, or Claude.');
+      if (notify) onNotify(`📋 AI Prompt (${effectiveCount} companies) copied! Paste into ChatGPT, Gemini, or Claude.`);
       setTimeout(() => setCopied(false), 2500);
     } catch {
       onNotify('Failed to copy to clipboard');
@@ -312,47 +344,111 @@ Generate the ${count} companies now in strict CSV:`;
 
             {/* 4. Number of Companies */}
             <div>
-              <label style={{ fontSize: '0.75rem', fontWeight: 700, color: '#c084fc', display: 'flex', alignItems: 'center', gap: '5px', marginBottom: '0.4rem' }}>
-                <Target size={13} /> List Size
-              </label>
-              <div style={{ display: 'flex', gap: '0.5rem' }}>
-                {[25, 50, 100].map((num) => (
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.4rem' }}>
+                <label style={{ fontSize: '0.75rem', fontWeight: 700, color: '#c084fc', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                  <Target size={13} /> List Size: <span style={{ color: '#f8fafc', fontWeight: 800 }}>{effectiveCount} companies</span>
+                </label>
+              </div>
+              <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap' }}>
+                {['15', '30', '50', '100', 'Custom'].map((opt) => (
                   <button
-                    key={num}
-                    onClick={() => setCount(num)}
-                    className={`btn ${count === num ? 'btn-primary' : 'btn-secondary'}`}
-                    style={{ flex: 1, padding: '0.4rem', fontSize: '0.8rem' }}
+                    key={opt}
+                    onClick={() => setListSizeOption(opt)}
+                    className={`btn ${listSizeOption === opt ? 'btn-primary' : 'btn-secondary'}`}
+                    style={{ flex: 1, minWidth: '45px', padding: '0.35rem 0.5rem', fontSize: '0.775rem' }}
                   >
-                    {num}
+                    {opt === 'Custom' ? 'Custom...' : opt}
                   </button>
                 ))}
               </div>
+              {listSizeOption === 'Custom' && (
+                <div style={{ marginTop: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <input
+                    type="number"
+                    min={5}
+                    max={200}
+                    className="input-field"
+                    placeholder="Enter custom count (e.g. 40, 75)..."
+                    value={customListSize}
+                    onChange={(e) => setCustomListSize(e.target.value)}
+                    style={{ fontSize: '0.8rem', padding: '0.35rem 0.6rem', flex: 1 }}
+                  />
+                  <span style={{ fontSize: '0.725rem', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
+                    (5–200 max)
+                  </span>
+                </div>
+              )}
             </div>
           </div>
 
-          {/* Target Role input */}
+          {/* Target Role & Persona */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+              <span style={{ fontSize: '0.775rem', fontWeight: 700, color: 'var(--text-muted)' }}>
+                🎯 Target Hiring Persona:
+              </span>
+              {[
+                'Software Engineers & Tech Leads',
+                'Product Managers',
+                'Data Science & AI/ML',
+                'Recruiters & Talent Leads',
+                'Founders & Execs',
+                'Custom',
+              ].map((r) => (
+                <button
+                  key={r}
+                  onClick={() => setTargetRole(r)}
+                  style={{
+                    background: targetRole === r ? 'rgba(99, 102, 241, 0.25)' : 'rgba(255, 255, 255, 0.05)',
+                    color: targetRole === r ? '#a5b4fc' : 'var(--text-secondary)',
+                    border: targetRole === r ? '1px solid #818cf8' : '1px solid var(--border-subtle)',
+                    borderRadius: 'var(--radius-full)',
+                    padding: '0.25rem 0.65rem',
+                    fontSize: '0.725rem',
+                    cursor: 'pointer',
+                    fontWeight: targetRole === r ? 700 : 500,
+                  }}
+                >
+                  {r === 'Custom' ? '✏️ Custom Persona...' : r}
+                </button>
+              ))}
+            </div>
+            {targetRole === 'Custom' && (
+              <input
+                type="text"
+                className="input-field"
+                placeholder="Enter specific hiring role (e.g. Founding Full-Stack Engineer, Staff Cloud Architect, Growth Lead)..."
+                value={customTargetRole}
+                onChange={(e) => setCustomTargetRole(e.target.value)}
+                style={{ fontSize: '0.8rem', padding: '0.4rem 0.75rem' }}
+              />
+            )}
+          </div>
+
+          {/* Pure Product Companies Filter Checkbox */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
-            <span style={{ fontSize: '0.775rem', fontWeight: 600, color: 'var(--text-muted)' }}>
-              🎯 Target Hiring Persona:
-            </span>
-            {['Software Engineers & Tech Leads', 'Product Managers', 'Recruiters & Talent Leads', 'Founders & Execs'].map((r) => (
-              <button
-                key={r}
-                onClick={() => setTargetRole(r)}
-                style={{
-                  background: targetRole === r ? 'rgba(99, 102, 241, 0.25)' : 'rgba(255, 255, 255, 0.05)',
-                  color: targetRole === r ? '#a5b4fc' : 'var(--text-secondary)',
-                  border: targetRole === r ? '1px solid #818cf8' : '1px solid var(--border-subtle)',
-                  borderRadius: 'var(--radius-full)',
-                  padding: '0.25rem 0.65rem',
-                  fontSize: '0.725rem',
-                  cursor: 'pointer',
-                  fontWeight: targetRole === r ? 700 : 500,
-                }}
-              >
-                {r}
-              </button>
-            ))}
+            <label
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                fontSize: '0.775rem',
+                color: '#cbd5e1',
+                cursor: 'pointer',
+                backgroundColor: 'rgba(255, 255, 255, 0.04)',
+                padding: '0.35rem 0.75rem',
+                borderRadius: 'var(--radius-md)',
+                border: '1px solid var(--border-subtle)',
+              }}
+            >
+              <input
+                type="checkbox"
+                checked={pureProductOnly}
+                onChange={(e) => setPureProductOnly(e.target.checked)}
+                style={{ accentColor: '#6366f1', cursor: 'pointer' }}
+              />
+              <span>Exclude IT Services & Body Shops (Strictly Pure Product / Tech Innovators)</span>
+            </label>
           </div>
 
           {/* Strict Validation Anti-Tracking Callout */}
