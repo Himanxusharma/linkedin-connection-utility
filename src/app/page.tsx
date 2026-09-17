@@ -15,6 +15,17 @@ import { ToastNotification, ToastItem, ToastType } from '../components/ToastNoti
 import { CompanyRecord, OutreachStatus, UserOutreachData } from '../types/company';
 import { LinkOpenMode, getSavedLinkOpenMode, saveLinkOpenMode, openOutreachUrl } from '../lib/navigation';
 import { getUserData, saveUserData, isFirebaseConfigured } from '../lib/firebase';
+import {
+  getStoredStarredSet,
+  saveStoredStarredSet,
+  getStoredNotesMap,
+  saveStoredNotesMap,
+  getStoredOutreachMap,
+  saveStoredOutreachMap,
+  getStoredCustomCompanies,
+  saveStoredCustomCompanies,
+  createDebouncedSync,
+} from '../lib/storage';
 import { useUser } from '@clerk/nextjs';
 import seedCompanies from '../data/seed-companies.json';
 import { ShieldAlert, Heart } from 'lucide-react';
@@ -58,22 +69,31 @@ export default function Home() {
   useEffect(() => {
     try {
       setLinkOpenMode(getSavedLinkOpenMode());
-
-      const savedStarred = localStorage.getItem('linkbuilder_starred');
-      if (savedStarred) setStarredSet(new Set(JSON.parse(savedStarred)));
-
-      const savedNotes = localStorage.getItem('linkbuilder_company_notes');
-      if (savedNotes) setNotesMap(JSON.parse(savedNotes));
-
-      const savedCustom = localStorage.getItem('linkbuilder_custom_companies');
-      if (savedCustom) setCustomCompanies(JSON.parse(savedCustom));
-
-      const savedStatus = localStorage.getItem('linkbuilder_outreach_status');
-      if (savedStatus) setOutreachMap(JSON.parse(savedStatus));
+      setStarredSet(getStoredStarredSet());
+      setNotesMap(getStoredNotesMap());
+      setCustomCompanies(getStoredCustomCompanies());
+      setOutreachMap(getStoredOutreachMap());
     } catch {
       // ignore
     }
   }, []);
+
+  // Debounced cloud sync ref to prevent network spam and Firestore rate limits
+  const debouncedCloudSync = useMemo(
+    () =>
+      createDebouncedSync(async (payload: { userId: string; data: Partial<UserOutreachData> }) => {
+        setIsSyncing(true);
+        try {
+          await saveUserData(payload.userId, payload.data);
+          setLastCloudSynced(new Date());
+        } catch (err) {
+          console.warn('Failed auto-syncing to cloud:', err);
+        } finally {
+          setIsSyncing(false);
+        }
+      }, 500),
+    []
+  );
 
   // When an authenticated Clerk user is detected, fetch and merge cloud Firestore data
   useEffect(() => {
@@ -89,21 +109,21 @@ export default function Home() {
           if (cloudData.outreachMap) {
             setOutreachMap((prev) => {
               const merged = { ...prev, ...cloudData.outreachMap };
-              localStorage.setItem('linkbuilder_outreach_status', JSON.stringify(merged));
+              saveStoredOutreachMap(merged);
               return merged;
             });
           }
           if (cloudData.notesMap) {
             setNotesMap((prev) => {
               const merged = { ...prev, ...cloudData.notesMap };
-              localStorage.setItem('linkbuilder_company_notes', JSON.stringify(merged));
+              saveStoredNotesMap(merged);
               return merged;
             });
           }
           if (cloudData.starredSet && Array.isArray(cloudData.starredSet)) {
             setStarredSet((prev) => {
               const merged = new Set([...Array.from(prev), ...cloudData.starredSet!]);
-              localStorage.setItem('linkbuilder_starred', JSON.stringify(Array.from(merged)));
+              saveStoredStarredSet(merged);
               return merged;
             });
           }
@@ -113,7 +133,7 @@ export default function Home() {
               prev.forEach((c) => map.set(c.name.toLowerCase(), c));
               cloudData.customCompanies!.forEach((c) => map.set(c.name.toLowerCase(), c));
               const merged = Array.from(map.values());
-              localStorage.setItem('linkbuilder_custom_companies', JSON.stringify(merged));
+              saveStoredCustomCompanies(merged);
               return merged;
             });
           }
@@ -121,16 +141,16 @@ export default function Home() {
           showToast(`☁️ Loaded ${activeUser.firstName || 'user'}'s cloud outreach data!`);
         } else if (isMounted) {
           // If no remote cloud data yet, back up current local session into user's profile
-          const currentStarred = localStorage.getItem('linkbuilder_starred');
-          const currentNotes = localStorage.getItem('linkbuilder_company_notes');
-          const currentStatus = localStorage.getItem('linkbuilder_outreach_status');
-          const currentCustom = localStorage.getItem('linkbuilder_custom_companies');
+          const currentStarred = getStoredStarredSet();
+          const currentNotes = getStoredNotesMap();
+          const currentStatus = getStoredOutreachMap();
+          const currentCustom = getStoredCustomCompanies();
 
           await saveUserData(activeUser.id, {
-            starredSet: currentStarred ? JSON.parse(currentStarred) : [],
-            notesMap: currentNotes ? JSON.parse(currentNotes) : {},
-            outreachMap: currentStatus ? JSON.parse(currentStatus) : {},
-            customCompanies: currentCustom ? JSON.parse(currentCustom) : [],
+            starredSet: Array.from(currentStarred),
+            notesMap: currentNotes,
+            outreachMap: currentStatus,
+            customCompanies: currentCustom,
             userEmail: activeUser.primaryEmailAddress?.emailAddress,
             userName: activeUser.fullName || activeUser.firstName || undefined,
           });
@@ -151,20 +171,13 @@ export default function Home() {
     return () => {
       isMounted = false;
     };
-  }, [isUserLoaded, isSignedIn, user?.id]);
+  }, [isUserLoaded, isSignedIn, user]);
 
-  // Helper to persist updates to Firestore if logged in
-  const syncToCloud = async (partial: Partial<UserOutreachData>) => {
+  // Helper to persist updates to Firestore with debouncing if logged in
+  const syncToCloud = (partial: Partial<UserOutreachData>) => {
     if (!isSignedIn || !user?.id) return;
     setIsSyncing(true);
-    try {
-      await saveUserData(user.id, partial);
-      setLastCloudSynced(new Date());
-    } catch (err) {
-      console.warn('Failed auto-syncing to cloud:', err);
-    } finally {
-      setIsSyncing(false);
-    }
+    debouncedCloudSync({ userId: user.id, data: partial });
   };
 
   // Merge seedCompanies with persistent customCompanies and ensure sequential S.No
@@ -189,11 +202,8 @@ export default function Home() {
         next.add(companyKey);
         showToast('⭐ Added to Starred Companies!');
       }
-      const arrayData = Array.from(next);
-      try {
-        localStorage.setItem('linkbuilder_starred', JSON.stringify(arrayData));
-      } catch { }
-      syncToCloud({ starredSet: arrayData });
+      saveStoredStarredSet(next);
+      syncToCloud({ starredSet: Array.from(next) });
       return next;
     });
   };
@@ -205,11 +215,8 @@ export default function Home() {
         if (star) next.add(key);
         else next.delete(key);
       });
-      const arrayData = Array.from(next);
-      try {
-        localStorage.setItem('linkbuilder_starred', JSON.stringify(arrayData));
-      } catch { }
-      syncToCloud({ starredSet: arrayData });
+      saveStoredStarredSet(next);
+      syncToCloud({ starredSet: Array.from(next) });
       return next;
     });
     showToast(`${star ? 'Starred' : 'Unstarred'} ${companyKeys.length} companies!`);
@@ -218,9 +225,7 @@ export default function Home() {
   const handleUpdateNotes = (companyKey: string, noteText: string) => {
     setNotesMap((prev) => {
       const next = { ...prev, [companyKey]: noteText };
-      try {
-        localStorage.setItem('linkbuilder_company_notes', JSON.stringify(next));
-      } catch { }
+      saveStoredNotesMap(next);
       syncToCloud({ notesMap: next });
       return next;
     });
@@ -229,9 +234,7 @@ export default function Home() {
   const handleUpdateOutreachStatus = (companyKey: string, status: OutreachStatus) => {
     setOutreachMap((prev) => {
       const next = { ...prev, [companyKey]: status };
-      try {
-        localStorage.setItem('linkbuilder_outreach_status', JSON.stringify(next));
-      } catch { }
+      saveStoredOutreachMap(next);
       syncToCloud({ outreachMap: next });
       return next;
     });
@@ -244,9 +247,7 @@ export default function Home() {
       companyKeys.forEach((key) => {
         next[key] = status;
       });
-      try {
-        localStorage.setItem('linkbuilder_outreach_status', JSON.stringify(next));
-      } catch { }
+      saveStoredOutreachMap(next);
       syncToCloud({ outreachMap: next });
       return next;
     });
@@ -319,9 +320,8 @@ export default function Home() {
     setCustomCompanies((prev) => {
       const filtered = prev.filter((c) => c.name.toLowerCase() !== newComp.name.toLowerCase());
       const next = [newComp, ...filtered];
-      try {
-        localStorage.setItem('linkbuilder_custom_companies', JSON.stringify(next));
-      } catch { }
+      saveStoredCustomCompanies(next);
+      syncToCloud({ customCompanies: next });
       return next;
     });
     showToast(`Added ${newComp.name} to persistent catalog!`);
@@ -332,9 +332,8 @@ export default function Home() {
       const names = new Set(newComps.map((c) => c.name.toLowerCase()));
       const filtered = prev.filter((c) => !names.has(c.name.toLowerCase()));
       const next = [...newComps, ...filtered];
-      try {
-        localStorage.setItem('linkbuilder_custom_companies', JSON.stringify(next));
-      } catch { }
+      saveStoredCustomCompanies(next);
+      syncToCloud({ customCompanies: next });
       return next;
     });
     showToast(`Saved ${newComps.length} companies to persistent catalog!`);
@@ -347,17 +346,10 @@ export default function Home() {
 
   const handleDataRestored = () => {
     try {
-      const savedStarred = localStorage.getItem('linkbuilder_starred');
-      if (savedStarred) setStarredSet(new Set(JSON.parse(savedStarred)));
-
-      const savedNotes = localStorage.getItem('linkbuilder_company_notes');
-      if (savedNotes) setNotesMap(JSON.parse(savedNotes));
-
-      const savedCustom = localStorage.getItem('linkbuilder_custom_companies');
-      if (savedCustom) setCustomCompanies(JSON.parse(savedCustom));
-
-      const savedStatus = localStorage.getItem('linkbuilder_outreach_status');
-      if (savedStatus) setOutreachMap(JSON.parse(savedStatus));
+      setStarredSet(getStoredStarredSet());
+      setNotesMap(getStoredNotesMap());
+      setCustomCompanies(getStoredCustomCompanies());
+      setOutreachMap(getStoredOutreachMap());
     } catch { }
   };
 

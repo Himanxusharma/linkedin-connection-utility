@@ -1,6 +1,9 @@
 import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
 import {
   getFirestore,
+  initializeFirestore,
+  persistentLocalCache,
+  persistentMultipleTabManager,
   collection,
   doc,
   getDocs,
@@ -35,7 +38,17 @@ let db: Firestore | null = null;
 if (typeof window !== 'undefined' && isFirebaseConfigured()) {
   try {
     app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
-    db = getFirestore(app);
+    // Enable Multi-Tab IndexedDB offline persistent caching for instant reads and offline writes
+    try {
+      db = initializeFirestore(app, {
+        localCache: persistentLocalCache({
+          tabManager: persistentMultipleTabManager(),
+        }),
+      });
+    } catch {
+      // If already initialized (e.g. fast refresh), retrieve instance
+      db = getFirestore(app);
+    }
   } catch (err) {
     console.warn('Could not initialize Firebase:', err);
   }
