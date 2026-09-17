@@ -14,7 +14,7 @@ import { SplitScreenGuideModal } from '../components/SplitScreenGuideModal';
 import { CompanyRecord, OutreachStatus } from '../types/company';
 import { LinkOpenMode, getSavedLinkOpenMode, saveLinkOpenMode, openOutreachUrl } from '../lib/navigation';
 import seedCompanies from '../data/seed-companies.json';
-import { CheckCircle, ShieldAlert } from 'lucide-react';
+import { CheckCircle, ShieldAlert, Heart } from 'lucide-react';
 
 interface ToastItem {
   id: string;
@@ -457,7 +457,12 @@ export default function Home() {
             <ShieldAlert size={14} color="#f59e0b" />
             Zero bots · Zero scraping · Fully compliant with LinkedIn Terms of Service. Ready for 1-click Vercel deployment.
           </p>
-          <p style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '0.5rem' }}>
+          <p style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.825rem', color: '#cbd5e1', marginTop: '0.35rem' }}>
+            <span>Made with</span>
+            <Heart size={14} color="#f43f5e" fill="#f43f5e" />
+            <span>• Wish you the best on your networking journey! 🚀</span>
+          </p>
+          <p style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '0.2rem' }}>
             © {new Date().getFullYear()} Link Builder Pro. All rights reserved.
           </p>
         </div>
