@@ -261,6 +261,7 @@ export default function Home() {
         onOpenBackupModal={() => setIsBackupModalOpen(true)}
         linkOpenMode={linkOpenMode}
         onChangeLinkOpenMode={handleChangeLinkOpenMode}
+        onNotify={showToast}
       />
 
       {/* Main Content Area */}

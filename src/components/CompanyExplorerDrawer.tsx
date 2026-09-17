@@ -18,10 +18,11 @@ import {
   Info,
   Star,
   FileText,
+  Smartphone,
 } from 'lucide-react';
 import { CompanyRecord, OutreachStatus } from '../types/company';
 import { buildPeopleUrl, buildJobsUrl, buildGoogleSearchUrl } from '../lib/slug-heuristics';
-import { LinkOpenMode, getLinkTargetAttribute, openOutreachUrl } from '../lib/navigation';
+import { LinkOpenMode, getLinkTargetAttribute, openOutreachUrl, isMobileDevice } from '../lib/navigation';
 
 interface CompanyExplorerDrawerProps {
   company: CompanyRecord | null;
@@ -58,6 +59,11 @@ export const CompanyExplorerDrawer: React.FC<CompanyExplorerDrawerProps> = ({
   const [copiedUrl, setCopiedUrl] = useState<boolean>(false);
   const [iframeKey, setIframeKey] = useState<number>(0);
   const [localNotes, setLocalNotes] = useState<string>(notes);
+  const [isMobile, setIsMobile] = useState<boolean>(false);
+
+  useEffect(() => {
+    setIsMobile(isMobileDevice());
+  }, []);
 
   useEffect(() => {
     if (company) {
@@ -273,6 +279,25 @@ export const CompanyExplorerDrawer: React.FC<CompanyExplorerDrawerProps> = ({
               <AppWindow size={14} color="#38bdf8" />
               <span>Companion Window</span>
             </button>
+
+            {isMobile && (
+              <button
+                onClick={() => {
+                  openOutreachUrl(activeUrl, { mode: linkOpenMode, companyName: company.name });
+                  onNotify(`📱 Opening ${company.name} in LinkedIn App!`);
+                }}
+                className="btn btn-primary"
+                style={{
+                  padding: '0.45rem 0.8rem',
+                  fontSize: '0.775rem',
+                  background: 'linear-gradient(135deg, #0284c7 0%, #06b6d4 100%)',
+                }}
+                title="Launch directly into native LinkedIn Mobile App"
+              >
+                <Smartphone size={14} />
+                <span>Open App</span>
+              </button>
+            )}
             <button
               onClick={onClose}
               style={{

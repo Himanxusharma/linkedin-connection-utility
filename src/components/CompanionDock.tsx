@@ -14,10 +14,11 @@ import {
   Sparkles,
   Maximize2,
   Minimize2,
+  Smartphone,
 } from 'lucide-react';
 import { CompanyRecord, OutreachStatus } from '../types/company';
 import { buildPeopleUrl, buildJobsUrl } from '../lib/slug-heuristics';
-import { openOutreachUrl, LinkOpenMode } from '../lib/navigation';
+import { openOutreachUrl, LinkOpenMode, isMobileDevice } from '../lib/navigation';
 
 interface CompanionDockProps {
   activeCompany: CompanyRecord | null;
@@ -46,6 +47,11 @@ export const CompanionDock: React.FC<CompanionDockProps> = ({
 }) => {
   const [isMinimized, setIsMinimized] = useState(false);
   const [copiedNote, setCopiedNote] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    setIsMobile(isMobileDevice());
+  }, []);
 
   // Global hotkeys for J (Next) and K (Prev)
   useEffect(() => {
@@ -221,6 +227,24 @@ export const CompanionDock: React.FC<CompanionDockProps> = ({
                     title="Load Official Careers page"
                   >
                     <ExternalLink size={13} color="#10b981" /> Careers
+                  </button>
+                )}
+                {isMobile && (
+                  <button
+                    className="btn btn-primary"
+                    onClick={() => {
+                      const url = buildPeopleUrl(activeCompany.slug, targetRoleKeyword);
+                      openOutreachUrl(url, { mode: linkOpenMode, companyName: activeCompany.name });
+                      onNotify(`📱 Opening ${activeCompany.name} in LinkedIn App!`);
+                    }}
+                    style={{
+                      padding: '0.35rem 0.65rem',
+                      fontSize: '0.76rem',
+                      background: 'linear-gradient(135deg, #0284c7 0%, #06b6d4 100%)',
+                    }}
+                    title="Launch directly into native LinkedIn Mobile App"
+                  >
+                    <Smartphone size={13} /> App
                   </button>
                 )}
               </div>

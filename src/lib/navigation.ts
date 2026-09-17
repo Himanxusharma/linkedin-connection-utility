@@ -8,10 +8,92 @@ export interface LinkOpenOptions {
   mode?: LinkOpenMode;
   targetName?: string;
   companyName?: string;
+  forceBrowser?: boolean; // bypass mobile app deep-link if requested
 }
 
 // Global reference to the companion window to allow focusing and smooth steering
 let activeCompanionWindow: Window | null = null;
+
+/**
+ * Detects if the current user agent is a mobile device (iOS, Android, tablet).
+ */
+export function isMobileDevice(): boolean {
+  if (typeof window === 'undefined' || typeof navigator === 'undefined') return false;
+  const ua = navigator.userAgent || '';
+  const isMobileUA = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(ua);
+  // Also detect iPad on iPadOS 13+ which reports as Macintosh with touch points
+  const isIPad = /Macintosh/i.test(ua) && (navigator.maxTouchPoints || 0) > 1;
+  return isMobileUA || isIPad;
+}
+
+/**
+ * Gets the persisted user preference for mobile LinkedIn App redirection.
+ * Default is true on mobile.
+ */
+export function getSavedMobileAppRedirect(): boolean {
+  if (typeof window === 'undefined') return true;
+  try {
+    const saved = localStorage.getItem('linkbuilder_mobile_app_redirect');
+    if (saved !== null) {
+      return saved === 'true';
+    }
+  } catch {
+    // ignore
+  }
+  return true;
+}
+
+/**
+ * Saves the user preference for mobile LinkedIn App redirection.
+ */
+export function saveMobileAppRedirect(enabled: boolean): void {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem('linkbuilder_mobile_app_redirect', enabled ? 'true' : 'false');
+  } catch {
+    // ignore
+  }
+}
+
+/**
+ * Constructs deep links for native mobile LinkedIn app (Android Intent & iOS Scheme).
+ */
+export function getLinkedInMobileLink(webUrl: string): {
+  appUrl: string;
+  isAndroid: boolean;
+  isIOS: boolean;
+  isLinkedIn: boolean;
+} {
+  if (!webUrl) return { appUrl: '', isAndroid: false, isIOS: false, isLinkedIn: false };
+
+  const isAndroid = typeof navigator !== 'undefined' && /Android/i.test(navigator.userAgent || '');
+  const isIOS = typeof navigator !== 'undefined' && (/iPhone|iPad|iPod/i.test(navigator.userAgent || '') || (/Macintosh/i.test(navigator.userAgent || '') && (navigator.maxTouchPoints || 0) > 1));
+  const isLinkedIn = webUrl.includes('linkedin.com');
+
+  if (!isLinkedIn) {
+    return { appUrl: webUrl, isAndroid, isIOS, isLinkedIn: false };
+  }
+
+  // 1. Android Chrome Intent URI (intercepts directly into com.linkedin.android app with web fallback)
+  if (isAndroid) {
+    const cleanPath = webUrl.replace(/^https?:\/\//i, '');
+    const intentUrl = `intent://${cleanPath}#Intent;scheme=https;package=com.linkedin.android;S.browser_fallback_url=${encodeURIComponent(webUrl)};end`;
+    return { appUrl: intentUrl, isAndroid: true, isIOS: false, isLinkedIn: true };
+  }
+
+  // 2. iOS LinkedIn Scheme
+  if (isIOS) {
+    const companyMatch = webUrl.match(/linkedin\.com\/company\/([^\/?#]+)/i);
+    if (companyMatch && companyMatch[1]) {
+      const slug = companyMatch[1];
+      return { appUrl: `linkedin://company/${slug}`, isAndroid: false, isIOS: true, isLinkedIn: true };
+    }
+    // Universal link fallback for other LinkedIn pages
+    return { appUrl: webUrl, isAndroid: false, isIOS: true, isLinkedIn: true };
+  }
+
+  return { appUrl: webUrl, isAndroid: false, isIOS: false, isLinkedIn: true };
+}
 
 /**
  * Gets the persisted user preference for link opening mode.
@@ -53,10 +135,44 @@ export function openOutreachUrl(
 ): Window | null {
   if (typeof window === 'undefined') return null;
 
+  const isMobile = isMobileDevice();
+  const mobileRedirect = getSavedMobileAppRedirect();
+
+  // Mobile App Deep-Link Interception (Android Intent / iOS Scheme)
+  if (isMobile && mobileRedirect && !options?.forceBrowser && url.includes('linkedin.com')) {
+    const { appUrl, isAndroid, isIOS } = getLinkedInMobileLink(url);
+
+    if (isAndroid) {
+      // Chrome Intent automatically opens native LinkedIn app or falls back to web
+      window.location.href = appUrl;
+      return null;
+    }
+
+    if (isIOS) {
+      const startTime = Date.now();
+      window.location.href = appUrl;
+      setTimeout(() => {
+        // If app isn't installed and window remains active, fall back to web
+        if (Date.now() - startTime < 1600) {
+          window.location.href = url;
+        }
+      }, 1000);
+      return null;
+    }
+
+    window.location.href = url;
+    return null;
+  }
+
   const mode = options?.mode || getSavedLinkOpenMode();
   const targetName = options?.targetName || 'LinkBuilderCompanion';
 
   if (mode === 'companion') {
+    // On mobile, companion popup windows are not supported well; use single tab/reusable window
+    if (isMobile) {
+      return window.open(url, 'LinkBuilderWorkstation');
+    }
+
     // Calculate optimal split-screen size: right 55% of user's screen
     const screenWidth = window.screen.availWidth || window.innerWidth;
     const screenHeight = window.screen.availHeight || window.innerHeight;
@@ -110,6 +226,10 @@ export function openOutreachUrl(
  * Returns the HTML target attribute string for <a> tags when not using onClick.
  */
 export function getLinkTargetAttribute(mode: LinkOpenMode): string {
+  if (typeof window !== 'undefined' && isMobileDevice() && getSavedMobileAppRedirect()) {
+    // Direct navigation allows iOS Universal Links and Android App Links to open native app
+    return '_self';
+  }
   if (mode === 'companion') return 'LinkBuilderCompanion';
   if (mode === 'reusable-tab') return 'LinkBuilderWorkstation';
   return '_blank';

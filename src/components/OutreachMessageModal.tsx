@@ -13,10 +13,11 @@ import {
   Briefcase,
   UserCheck,
   Send,
+  Smartphone,
 } from 'lucide-react';
 import { CompanyRecord } from '../types/company';
 import { buildPeopleUrl } from '../lib/slug-heuristics';
-import { LinkOpenMode, openOutreachUrl, getLinkTargetAttribute } from '../lib/navigation';
+import { LinkOpenMode, openOutreachUrl, getLinkTargetAttribute, isMobileDevice } from '../lib/navigation';
 
 interface OutreachMessageModalProps {
   company: CompanyRecord | null;
@@ -49,6 +50,11 @@ export const OutreachMessageModal: React.FC<OutreachMessageModalProps> = ({
   const [recipientName, setRecipientName] = useState<string>('');
   const [message, setMessage] = useState<string>('');
   const [copied, setCopied] = useState<boolean>(false);
+  const [isMobile, setIsMobile] = useState<boolean>(false);
+
+  useEffect(() => {
+    setIsMobile(isMobileDevice());
+  }, []);
 
   useEffect(() => {
     try {
@@ -376,6 +382,21 @@ export const OutreachMessageModal: React.FC<OutreachMessageModalProps> = ({
             <span>Open {company.name} People Page</span>
             <ExternalLink size={12} />
           </a>
+
+          {isMobile && (
+            <button
+              onClick={() => {
+                openOutreachUrl(peopleUrl, { mode: linkOpenMode, companyName: company.name });
+                onNotify(`📱 Opening ${company.name} in LinkedIn App!`);
+              }}
+              className="btn btn-secondary"
+              style={{ fontSize: '0.825rem', display: 'flex', alignItems: 'center', gap: '0.4rem', border: '1px solid #38bdf8' }}
+              title="Launch directly into native LinkedIn Mobile App"
+            >
+              <Smartphone size={14} color="#38bdf8" />
+              <span>Open in LinkedIn App</span>
+            </button>
+          )}
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             <button

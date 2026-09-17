@@ -1,6 +1,5 @@
 'use client';
-
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Sparkles,
   Database,
@@ -13,9 +12,15 @@ import {
   Keyboard,
   HardDrive,
   AppWindow,
+  Smartphone,
 } from 'lucide-react';
 import { isFirebaseConfigured } from '../lib/firebase';
-import { LinkOpenMode } from '../lib/navigation';
+import {
+  LinkOpenMode,
+  isMobileDevice,
+  getSavedMobileAppRedirect,
+  saveMobileAppRedirect,
+} from '../lib/navigation';
 
 interface HeaderProps {
   activeTab: 'catalog' | 'workspace';
@@ -27,6 +32,7 @@ interface HeaderProps {
   onOpenBackupModal?: () => void;
   linkOpenMode?: LinkOpenMode;
   onChangeLinkOpenMode?: (mode: LinkOpenMode) => void;
+  onNotify?: (msg: string) => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -39,8 +45,27 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenBackupModal,
   linkOpenMode = 'companion',
   onChangeLinkOpenMode,
+  onNotify,
 }) => {
   const isCloud = isFirebaseConfigured();
+  const [isMobile, setIsMobile] = useState<boolean>(false);
+  const [mobileAppRedirect, setMobileAppRedirect] = useState<boolean>(true);
+
+  useEffect(() => {
+    setIsMobile(isMobileDevice());
+    setMobileAppRedirect(getSavedMobileAppRedirect());
+  }, []);
+
+  const handleToggleMobileApp = () => {
+    const next = !mobileAppRedirect;
+    setMobileAppRedirect(next);
+    saveMobileAppRedirect(next);
+    onNotify?.(
+      next
+        ? '📱 LinkedIn App Redirection enabled! Links will open the native mobile app.'
+        : '🌐 Browser links enabled. Links will open in your mobile browser.'
+    );
+  };
 
   return (
     <header style={{ borderBottom: '1px solid var(--border-subtle)', padding: '1.25rem 0', marginBottom: '2rem' }}>
@@ -197,6 +222,33 @@ export const Header: React.FC<HeaderProps> = ({
               >
                 <HardDrive size={15} color="#10b981" />
                 <span>Backup & Sync</span>
+              </button>
+            )}
+
+            {/* Mobile LinkedIn App Redirection Toggle */}
+            {isMobile && (
+              <button
+                onClick={handleToggleMobileApp}
+                className={`btn ${mobileAppRedirect ? 'btn-primary' : 'btn-outline'}`}
+                style={{
+                  padding: '0.35rem 0.65rem',
+                  fontSize: '0.78rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.4rem',
+                  borderRadius: 'var(--radius-md)',
+                  background: mobileAppRedirect
+                    ? 'linear-gradient(135deg, #0284c7 0%, #06b6d4 100%)'
+                    : 'transparent',
+                }}
+                title={
+                  mobileAppRedirect
+                    ? 'Mobile App Redirect is ON: Tapping companies opens the LinkedIn App'
+                    : 'Mobile App Redirect is OFF: Tapping companies opens in your browser'
+                }
+              >
+                <Smartphone size={14} color={mobileAppRedirect ? '#ffffff' : '#38bdf8'} />
+                <span>{mobileAppRedirect ? 'App: ON' : 'App: OFF'}</span>
               </button>
             )}
 
