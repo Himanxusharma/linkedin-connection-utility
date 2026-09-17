@@ -290,20 +290,26 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
   }, [companies, selectedCategory, searchQuery, selectedStatusFilter, sortField, sortOrder, activeOutreachMap]);
 
   const handleSort = (field: SortField) => {
+    let nextOrder: 'asc' | 'desc' = 'asc';
     if (sortField === field) {
-      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+      nextOrder = sortOrder === 'asc' ? 'desc' : 'asc';
+      setSortOrder(nextOrder);
     } else {
       setSortField(field);
       setSortOrder('asc');
     }
+    const label = field === 'rank' ? 'S.No' : field === 'name' ? 'Company Name' : field === 'category' ? 'Category' : 'Outreach Status';
+    onNotify(`Sorted by ${label} (${nextOrder === 'asc' ? 'Ascending' : 'Descending'})`);
   };
 
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
       const allIds = new Set(filteredCompanies.map((c) => c.id || c.name));
       setSelectedIds(allIds);
+      onNotify(`Selected all ${allIds.size} companies`);
     } else {
       setSelectedIds(new Set());
+      onNotify('Cleared row selection');
     }
   };
 
@@ -865,6 +871,9 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
                 setSelectedCategory('All');
                 setSelectedStatusFilter('all');
                 setSearchQuery('');
+                onNotify(`⭐ Showing all ${starredSet ? starredSet.size : 0} Starred Companies`);
+              } else {
+                onNotify('Viewing all companies');
               }
             }}
             style={{
@@ -911,6 +920,7 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
                 onClick={() => {
                   setSelectedCategory(cat);
                   setShowStarredOnly(false);
+                  onNotify(`Viewing ${cat} (${count} companies)`);
                 }}
                 style={{
                   background: isSelected ? 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)' : 'rgba(30, 41, 59, 0.7)',

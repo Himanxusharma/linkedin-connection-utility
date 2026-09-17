@@ -11,15 +11,11 @@ import { DataBackupModal } from '../components/DataBackupModal';
 import { CompanionDock } from '../components/CompanionDock';
 import { OutreachMessageModal } from '../components/OutreachMessageModal';
 import { SplitScreenGuideModal } from '../components/SplitScreenGuideModal';
+import { ToastNotification, ToastItem, ToastType } from '../components/ToastNotification';
 import { CompanyRecord, OutreachStatus } from '../types/company';
 import { LinkOpenMode, getSavedLinkOpenMode, saveLinkOpenMode, openOutreachUrl } from '../lib/navigation';
 import seedCompanies from '../data/seed-companies.json';
-import { CheckCircle, ShieldAlert, Heart } from 'lucide-react';
-
-interface ToastItem {
-  id: string;
-  message: string;
-}
+import { ShieldAlert, Heart } from 'lucide-react';
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState<'catalog' | 'workspace'>('catalog');
@@ -165,9 +161,43 @@ export default function Home() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
-  const showToast = (message: string) => {
+  const showToast = (message: string, explicitType?: ToastType) => {
     const id = Math.random().toString(36).substring(2, 9);
-    setToasts((prev) => [...prev, { id, message }]);
+    let type: ToastType = explicitType || 'info';
+
+    if (!explicitType) {
+      const lower = message.toLowerCase();
+      if (lower.includes('⭐') || lower.includes('star') || lower.includes('favorite')) {
+        type = 'star';
+      } else if (lower.includes('copi') || lower.includes('clipboard') || lower.includes('📋') || lower.includes('note')) {
+        type = 'copy';
+      } else if (lower.includes('fail') || lower.includes('error') || lower.includes('cannot') || lower.includes('blocked')) {
+        type = 'error';
+      } else if (lower.includes('warn') || lower.includes('miss') || lower.includes('unverified')) {
+        type = 'warning';
+      } else if (
+        lower.includes('added') ||
+        lower.includes('saved') ||
+        lower.includes('exported') ||
+        lower.includes('updated') ||
+        lower.includes('verified') ||
+        lower.includes('loaded') ||
+        lower.includes('restored') ||
+        lower.includes('switched') ||
+        lower.includes('launched') ||
+        lower.includes('linked') ||
+        lower.includes('steered') ||
+        lower.includes('selected') ||
+        lower.includes('cleared') ||
+        lower.includes('reset') ||
+        lower.includes('sorted') ||
+        lower.includes('opened')
+      ) {
+        type = 'success';
+      }
+    }
+
+    setToasts((prev) => [...prev.slice(-3), { id, message, type }]);
     setTimeout(() => {
       setToasts((prev) => prev.filter((t) => t.id !== id));
     }, 3200);
@@ -428,15 +458,11 @@ export default function Home() {
         }}
       />
 
-      {/* Floating Toast Notifications with ARIA live announcement */}
-      <div className="toast-container" role="status" aria-live="polite" aria-atomic="true">
-        {toasts.map((t) => (
-          <div key={t.id} className="toast">
-            <CheckCircle size={16} color="#34d399" />
-            <span>{t.message}</span>
-          </div>
-        ))}
-      </div>
+      {/* Floating Interactive Toast Notifications */}
+      <ToastNotification
+        toasts={toasts}
+        onDismiss={(id) => setToasts((prev) => prev.filter((t) => t.id !== id))}
+      />
 
       {/* Footer / ToS note */}
       <footer

@@ -345,6 +345,7 @@ export const WorkspaceView: React.FC<WorkspaceViewProps> = ({
   };
 
   const handleToggleStatus = (rowId: string) => {
+    const row = rows.find((r) => r.id === rowId);
     setRows((prev) =>
       prev.map((r) => {
         if (r.id !== rowId) return r;
@@ -352,15 +353,23 @@ export const WorkspaceView: React.FC<WorkspaceViewProps> = ({
         return { ...r, status: nextStatus };
       })
     );
+    if (row) {
+      const isNowVerified = row.status !== 'verified';
+      onNotify(isNowVerified ? `✅ Marked ${row.companyName} as verified` : `Marked ${row.companyName} as unverified`);
+    }
   };
 
   const handleDeleteRow = (rowId: string) => {
+    const row = rows.find((r) => r.id === rowId);
     setRows((prev) => prev.filter((r) => r.id !== rowId));
+    if (row) onNotify(`Removed ${row.companyName} from workspace`);
   };
 
   const handleClearAll = () => {
+    const count = rows.length;
     setRows([]);
     setInputText('');
+    if (count > 0) onNotify(`Cleared ${count} companies from workspace`);
   };
 
   const handleSaveToDatabase = async (row: WorkspaceRow) => {
@@ -1108,6 +1117,7 @@ export const WorkspaceView: React.FC<WorkspaceViewProps> = ({
               const sample = 'Microsoft\nGoogle\nNVIDIA\nStripe\nCRED\nPhonePe';
               setInputText(sample);
               parseInput(sample);
+              onNotify('✨ Loaded 6 sample companies into workspace');
             }}
           >
             <Sparkles size={15} color="#38bdf8" /> Try Sample List (6 Companies)
