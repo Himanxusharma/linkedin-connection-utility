@@ -122,7 +122,7 @@ export const SplitScreenGuideModal: React.FC<SplitScreenGuideModalProps> = ({
                 </span>
               </div>
               <p style={{ fontSize: '0.825rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
-                Use Link Builder Pro on the left and LinkedIn on the right — zero popup glitches, zero tab clutter.
+                Use Link Builder Pro on the left and LinkedIn on the right for zero popup glitches and zero tab clutter.
               </p>
             </div>
           </div>

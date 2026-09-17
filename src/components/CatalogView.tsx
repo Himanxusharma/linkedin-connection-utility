@@ -1438,7 +1438,7 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
                           </button>
                         </div>
                       ) : (
-                        <span style={{ color: 'var(--text-muted)' }}>—</span>
+                        <span style={{ color: 'var(--text-muted)' }}>-</span>
                       )}
                     </td>
                   </tr>

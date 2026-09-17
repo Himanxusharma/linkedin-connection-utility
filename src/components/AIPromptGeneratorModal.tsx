@@ -374,7 +374,7 @@ Generate all ${effectiveCount} verified companies now in strict CSV:`;
                     style={{ fontSize: '0.8rem', padding: '0.35rem 0.6rem', flex: 1 }}
                   />
                   <span style={{ fontSize: '0.725rem', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
-                    (5–200 max)
+                    (5 to 200 max)
                   </span>
                 </div>
               )}

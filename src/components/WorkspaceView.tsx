@@ -975,7 +975,7 @@ export const WorkspaceView: React.FC<WorkspaceViewProps> = ({
                           </button>
                         </div>
                       ) : (
-                        <span style={{ color: 'var(--text-muted)' }}>—</span>
+                        <span style={{ color: 'var(--text-muted)' }}>-</span>
                       )}
                     </td>
                     <td>
@@ -1001,7 +1001,7 @@ export const WorkspaceView: React.FC<WorkspaceViewProps> = ({
                           </button>
                         </div>
                       ) : (
-                        <span style={{ color: 'var(--text-muted)' }}>—</span>
+                        <span style={{ color: 'var(--text-muted)' }}>-</span>
                       )}
                     </td>
                     <td>
