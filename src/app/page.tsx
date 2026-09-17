@@ -69,12 +69,16 @@ export default function Home() {
     }
   }, []);
 
-  // Merge seedCompanies with persistent customCompanies
+  // Merge seedCompanies with persistent customCompanies and ensure sequential S.No
   const companies = useMemo(() => {
     const map = new Map<string, CompanyRecord>();
     (seedCompanies as CompanyRecord[]).forEach((c) => map.set(c.name.toLowerCase(), c));
     customCompanies.forEach((c) => map.set(c.name.toLowerCase(), c));
-    return Array.from(map.values());
+    const all = Array.from(map.values());
+    return all.map((c, idx) => ({
+      ...c,
+      rank: c.rank || (idx + 1),
+    }));
   }, [customCompanies]);
 
   const handleToggleStar = (companyKey: string) => {

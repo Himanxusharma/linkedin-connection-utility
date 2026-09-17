@@ -166,7 +166,7 @@ export const CompanionDock: React.FC<CompanionDockProps> = ({
                   </span>
                   {currentIndex >= 0 && (
                     <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
-                      #{currentIndex + 1} of {allCompanies.length}
+                      S.No #{activeCompany.rank || (currentIndex + 1)} • {currentIndex + 1} of {allCompanies.length}
                     </span>
                   )}
                 </div>

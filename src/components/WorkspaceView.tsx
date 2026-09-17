@@ -251,7 +251,9 @@ export const WorkspaceView: React.FC<WorkspaceViewProps> = ({
           fieldNames.find((f) => aliases.includes(f.trim().toLowerCase()));
 
         const companyField =
-          findField(['company', 'company name', 'name', 'organization', 'title']) || fieldNames[0];
+          findField(['company', 'company name', 'name', 'organization', 'title']) ||
+          fieldNames.find((f) => !['s.no', 'sno', 'rank', 'id', '#', 'no'].includes(f.trim().toLowerCase())) ||
+          fieldNames[0];
         const slugField = findField(['slug', 'company slug', 'linkedin slug', 'identifier']);
         const urlField = findField(['linkedin url', 'linkedin', 'url', 'link', 'profile', 'linkedin page']);
         const categoryField = findField(['category', 'industry', 'sector', 'subcategory']);
@@ -433,7 +435,8 @@ export const WorkspaceView: React.FC<WorkspaceViewProps> = ({
   const handleExportCsv = () => {
     if (rows.length === 0) return;
 
-    const exportData = rows.map((r) => ({
+    const exportData = rows.map((r, idx) => ({
+      'S.No': idx + 1,
       Company: r.companyName,
       Slug: r.slug,
       Status: r.status,
@@ -455,8 +458,9 @@ export const WorkspaceView: React.FC<WorkspaceViewProps> = ({
   };
 
   const copyAsGoogleSheetsTsv = async () => {
-    const headers = ['Company', 'Slug', 'Status', 'Category', 'People Link', 'Jobs Link', 'Careers'];
-    const lines = rows.map((r) => [
+    const headers = ['S.No', 'Company', 'Slug', 'Status', 'Category', 'People Link', 'Jobs Link', 'Careers'];
+    const lines = rows.map((r, idx) => [
+      idx + 1,
       r.companyName,
       r.slug,
       r.status,
@@ -470,9 +474,9 @@ export const WorkspaceView: React.FC<WorkspaceViewProps> = ({
   };
 
   const copyAsMarkdownTable = async () => {
-    const header = '| Company | Slug | Status | People Link | Jobs Link |\n|---|---|---|---|---|';
-    const lines = rows.map((r) => {
-      return `| **${r.companyName}** | \`${r.slug}\` | ${r.status} | [People](${r.peopleLink}) | [Jobs](${r.jobsLink}) |`;
+    const header = '| S.No | Company | Slug | Status | People Link | Jobs Link |\n|---|---|---|---|---|---|';
+    const lines = rows.map((r, idx) => {
+      return `| #${idx + 1} | **${r.companyName}** | \`${r.slug}\` | ${r.status} | [People](${r.peopleLink}) | [Jobs](${r.jobsLink}) |`;
     });
     const md = [header, ...lines].join('\n');
     await copyToClipboard(md, `${rows.length} rows as Markdown table`, 'md-ws');
@@ -833,6 +837,7 @@ export const WorkspaceView: React.FC<WorkspaceViewProps> = ({
           <table className="data-table">
             <thead>
               <tr>
+                <th style={{ width: '55px', minWidth: '55px', textAlign: 'center' }}>S.No</th>
                 <th style={{ width: '50px', minWidth: '50px', textAlign: 'center' }}>Verify</th>
                 <th style={{ minWidth: '160px' }}>Company</th>
                 <th style={{ width: '220px', minWidth: '180px' }}>Slug (Editable)</th>
@@ -844,12 +849,15 @@ export const WorkspaceView: React.FC<WorkspaceViewProps> = ({
               </tr>
             </thead>
             <tbody>
-              {rows.map((row) => {
+              {rows.map((row, idx) => {
                 const isPeopleCopied = copiedKey === `ws-people-${row.id}`;
                 const isJobsCopied = copiedKey === `ws-jobs-${row.id}`;
 
                 return (
                   <tr key={row.id}>
+                    <td style={{ textAlign: 'center', fontWeight: 600, color: 'var(--text-muted)', fontFamily: 'var(--font-mono)', fontSize: '0.8rem' }}>
+                      #{idx + 1}
+                    </td>
                     <td style={{ textAlign: 'center' }}>
                       <input
                         type="checkbox"

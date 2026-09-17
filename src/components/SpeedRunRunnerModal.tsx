@@ -430,7 +430,7 @@ export const SpeedRunRunnerModal: React.FC<SpeedRunRunnerModalProps> = ({
                         color: 'var(--text-muted)',
                       }}
                     >
-                      #{currentCompany.rank}
+                      S.No #{currentCompany.rank}
                     </span>
                   )}
                   <span className="badge badge-category" style={{ fontSize: '0.75rem' }}>

@@ -198,7 +198,7 @@ export const CompanyExplorerDrawer: React.FC<CompanyExplorerDrawerProps> = ({
                       fontFamily: 'var(--font-mono)',
                     }}
                   >
-                    #{company.rank}
+                    S.No #{company.rank}
                   </span>
                 )}
               </div>

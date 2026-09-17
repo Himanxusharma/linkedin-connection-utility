@@ -353,10 +353,10 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
   };
 
   const exportFilteredCsv = (recordsToExport: CompanyRecord[]) => {
-    const rows = recordsToExport.map((c) => {
+    const rows = recordsToExport.map((c, idx) => {
       const compKey = c.slug || c.name;
       return {
-        Rank: c.rank || '',
+        'S.No': c.rank || (idx + 1),
         Company: c.name,
         Starred: starredSet && starredSet.has(compKey) ? 'Yes' : 'No',
         Category: c.category,
@@ -382,11 +382,11 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
   };
 
   const copyAsGoogleSheetsTsv = async (records: CompanyRecord[]) => {
-    const headers = ['Rank', 'Company', 'Starred', 'Category', 'Slug', 'Status', 'Notes', 'People Link', 'Jobs Link', 'Careers'];
-    const lines = records.map((c) => {
+    const headers = ['S.No', 'Company', 'Starred', 'Category', 'Slug', 'Status', 'Notes', 'People Link', 'Jobs Link', 'Careers'];
+    const lines = records.map((c, idx) => {
       const compKey = c.slug || c.name;
       return [
-        c.rank || '',
+        c.rank || (idx + 1),
         c.name,
         starredSet && starredSet.has(compKey) ? '★' : '',
         c.category,
@@ -403,11 +403,11 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
   };
 
   const copyAsMarkdownTable = async (records: CompanyRecord[]) => {
-    const header = '| Rank | Company | Category | People Link | Jobs Link |\n|---|---|---|---|---|';
-    const lines = records.map((c) => {
+    const header = '| S.No | Company | Category | People Link | Jobs Link |\n|---|---|---|---|---|';
+    const lines = records.map((c, idx) => {
       const pUrl = buildPeopleUrl(c.slug, currentRoleKeyword);
       const jUrl = buildJobsUrl(c.slug);
-      return `| ${c.rank || '—'} | **${c.name}** | ${c.category} | [People](${pUrl}) | [Jobs](${jUrl}) |`;
+      return `| #${c.rank || (idx + 1)} | **${c.name}** | ${c.category} | [People](${pUrl}) | [Jobs](${jUrl}) |`;
     });
     const md = [header, ...lines].join('\n');
     await copyToClipboard(md, `${records.length} rows as Markdown table`, 'md-export');
@@ -1098,11 +1098,11 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
                 scope="col"
                 style={{ width: '75px', minWidth: '75px', cursor: 'pointer', userSelect: 'none' }}
                 onClick={() => handleSort('rank')}
-                title="Sort by Rank"
+                title="Sort by Serial Number (S.No)"
                 aria-sort={sortField === 'rank' ? (sortOrder === 'asc' ? 'ascending' : 'descending') : 'none'}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                  Rank
+                  S.No
                   {sortField === 'rank' ? (
                     sortOrder === 'asc' ? <ArrowUp size={12} color="#818cf8" /> : <ArrowDown size={12} color="#818cf8" />
                   ) : (
@@ -1175,7 +1175,7 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
                 </td>
               </tr>
             ) : (
-              filteredCompanies.map((c) => {
+              filteredCompanies.map((c, idx) => {
                 const rowId = c.id || c.name;
                 const companyKey = c.slug || c.name;
                 const isSelected = selectedIds.has(rowId);
@@ -1226,7 +1226,7 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
                       </button>
                     </td>
                     <td style={{ fontWeight: 600, color: 'var(--text-muted)', fontFamily: 'var(--font-mono)', fontSize: '0.8rem' }}>
-                      {c.rank ? `#${c.rank}` : '—'}
+                      #{c.rank || idx + 1}
                     </td>
                     <td>
                       <div style={{ display: 'flex', flexDirection: 'column' }}>
