@@ -91,7 +91,7 @@ export default function Home() {
       }
       try {
         localStorage.setItem('linkbuilder_starred', JSON.stringify(Array.from(next)));
-      } catch {}
+      } catch { }
       return next;
     });
   };
@@ -105,7 +105,7 @@ export default function Home() {
       });
       try {
         localStorage.setItem('linkbuilder_starred', JSON.stringify(Array.from(next)));
-      } catch {}
+      } catch { }
       return next;
     });
     showToast(`${star ? 'Starred' : 'Unstarred'} ${companyKeys.length} companies!`);
@@ -116,7 +116,7 @@ export default function Home() {
       const next = { ...prev, [companyKey]: noteText };
       try {
         localStorage.setItem('linkbuilder_company_notes', JSON.stringify(next));
-      } catch {}
+      } catch { }
       return next;
     });
   };
@@ -126,7 +126,7 @@ export default function Home() {
       const next = { ...prev, [companyKey]: status };
       try {
         localStorage.setItem('linkbuilder_outreach_status', JSON.stringify(next));
-      } catch {}
+      } catch { }
       return next;
     });
     showToast(`Status updated to ${status.replace('_', ' ')}!`);
@@ -140,7 +140,7 @@ export default function Home() {
       });
       try {
         localStorage.setItem('linkbuilder_outreach_status', JSON.stringify(next));
-      } catch {}
+      } catch { }
       return next;
     });
     showToast(`Updated ${companyKeys.length} companies to "${status.replace('_', ' ')}"!`);
@@ -214,7 +214,7 @@ export default function Home() {
       const next = [newComp, ...filtered];
       try {
         localStorage.setItem('linkbuilder_custom_companies', JSON.stringify(next));
-      } catch {}
+      } catch { }
       return next;
     });
     showToast(`Added ${newComp.name} to persistent catalog!`);
@@ -227,7 +227,7 @@ export default function Home() {
       const next = [...newComps, ...filtered];
       try {
         localStorage.setItem('linkbuilder_custom_companies', JSON.stringify(next));
-      } catch {}
+      } catch { }
       return next;
     });
     showToast(`Saved ${newComps.length} companies to persistent catalog!`);
@@ -251,7 +251,7 @@ export default function Home() {
 
       const savedStatus = localStorage.getItem('linkbuilder_outreach_status');
       if (savedStatus) setOutreachMap(JSON.parse(savedStatus));
-    } catch {}
+    } catch { }
   };
 
   const handleChangeLinkOpenMode = (mode: LinkOpenMode) => {
@@ -261,10 +261,10 @@ export default function Home() {
       mode === 'split'
         ? '🖥️ Switched to Split Screen Mode (Target Tab)'
         : mode === 'companion'
-        ? '🪟 Switched to Floating Popup Window'
-        : mode === 'reusable-tab'
-        ? '📑 Switched to 1 Reusable Tab'
-        : '🗂️ Switched to Classic New Tabs'
+          ? '🪟 Switched to Floating Popup Window'
+          : mode === 'reusable-tab'
+            ? '📑 Switched to 1 Reusable Tab'
+            : '🗂️ Switched to Classic New Tabs'
     );
   };
 
@@ -477,7 +477,7 @@ export default function Home() {
       >
         <div className="container" style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', alignItems: 'center' }}>
           <p>
-            Link Builder Pro is an outreach & research utility. All outbound links open user-initiated LinkedIn pages in new tabs.
+            Linkedin Utility is an outreach & research utility. All outbound links open user-initiated LinkedIn pages in new tabs.
           </p>
           <p style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
             <ShieldAlert size={14} color="#f59e0b" />
@@ -489,7 +489,7 @@ export default function Home() {
             <span>• Wish you the best on your networking journey! 🚀</span>
           </p>
           <p style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '0.2rem' }}>
-            © {new Date().getFullYear()} Link Builder Pro. All rights reserved.
+            © {new Date().getFullYear()} Linkedin Utility. All rights reserved.
           </p>
         </div>
       </footer>

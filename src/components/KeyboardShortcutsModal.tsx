@@ -128,7 +128,7 @@ export const KeyboardShortcutsModal: React.FC<KeyboardShortcutsModalProps> = ({
                 Keyboard Shortcuts & Power Controls
               </h2>
               <p style={{ fontSize: '0.775rem', color: 'var(--text-muted)' }}>
-                Master Link Builder Pro without touching your mouse
+                Master Linkedin Utility without touching your mouse
               </p>
             </div>
           </div>

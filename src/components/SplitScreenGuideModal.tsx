@@ -122,7 +122,7 @@ export const SplitScreenGuideModal: React.FC<SplitScreenGuideModalProps> = ({
                 </span>
               </div>
               <p style={{ fontSize: '0.825rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
-                Use Link Builder Pro on the left and LinkedIn on the right for zero popup glitches and zero tab clutter.
+                Use Linkedin Utility on the left and LinkedIn on the right for zero popup glitches and zero tab clutter.
               </p>
             </div>
           </div>
@@ -276,7 +276,7 @@ export const SplitScreenGuideModal: React.FC<SplitScreenGuideModalProps> = ({
                 <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem' }}>
                   <span style={{ background: '#38bdf8', color: '#000', borderRadius: '50%', width: '22px', height: '22px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '0.75rem', flexShrink: 0 }}>2</span>
                   <p style={{ fontSize: '0.825rem', color: '#e2e8f0', margin: 0 }}>
-                    Now both Link Builder Pro and LinkedIn will appear inside the <strong>same browser window side-by-side</strong>!
+                    Now both Linkedin Utility and LinkedIn will appear inside the <strong>same browser window side-by-side</strong>!
                   </p>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem' }}>
@@ -316,7 +316,7 @@ export const SplitScreenGuideModal: React.FC<SplitScreenGuideModalProps> = ({
                 <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem' }}>
                   <span style={{ background: '#38bdf8', color: '#000', borderRadius: '50%', width: '22px', height: '22px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '0.75rem', flexShrink: 0 }}>1</span>
                   <p style={{ fontSize: '0.825rem', color: '#e2e8f0', margin: 0 }}>
-                    Click on the Link Builder Pro window and press: <kbd style={{ background: '#1e293b', border: '1px solid #475569', borderRadius: '4px', padding: '2px 6px', fontFamily: 'var(--font-mono)', fontSize: '0.75rem' }}>Win</kbd> + <kbd style={{ background: '#1e293b', border: '1px solid #475569', borderRadius: '4px', padding: '2px 6px', fontFamily: 'var(--font-mono)', fontSize: '0.75rem' }}>Left ⬅️</kbd>
+                    Click on the Linkedin Utility window and press: <kbd style={{ background: '#1e293b', border: '1px solid #475569', borderRadius: '4px', padding: '2px 6px', fontFamily: 'var(--font-mono)', fontSize: '0.75rem' }}>Win</kbd> + <kbd style={{ background: '#1e293b', border: '1px solid #475569', borderRadius: '4px', padding: '2px 6px', fontFamily: 'var(--font-mono)', fontSize: '0.75rem' }}>Left ⬅️</kbd>
                   </p>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem' }}>

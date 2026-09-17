@@ -17,7 +17,7 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'Link Builder Pro | LinkedIn People & Jobs Intelligence',
+  title: 'Linkedin Utility | LinkedIn People & Jobs Intelligence',
   description:
     'Turn company names into verified LinkedIn People and Jobs page links. Pre-loaded verified fintech database, automated slug heuristics, multi-platform ingestion, and Google Cloud Firebase sync.',
 };

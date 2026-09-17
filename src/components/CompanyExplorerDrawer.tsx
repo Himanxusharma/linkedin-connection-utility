@@ -256,12 +256,12 @@ export const CompanyExplorerDrawer: React.FC<CompanyExplorerDrawerProps> = ({
                     outreachStatus === 'connected'
                       ? '#34d399'
                       : outreachStatus === 'applied'
-                      ? '#38bdf8'
-                      : outreachStatus === 'contacted'
-                      ? '#fbbf24'
-                      : outreachStatus === 'reviewed'
-                      ? '#a855f7'
-                      : 'var(--text-muted)',
+                        ? '#38bdf8'
+                        : outreachStatus === 'contacted'
+                          ? '#fbbf24'
+                          : outreachStatus === 'reviewed'
+                            ? '#a855f7'
+                            : 'var(--text-muted)',
                   cursor: 'pointer',
                 }}
               >
@@ -704,7 +704,7 @@ export const CompanyExplorerDrawer: React.FC<CompanyExplorerDrawerProps> = ({
                     Why Companion Window Mode is Best for LinkedIn
                   </h4>
                   <p style={{ fontSize: '0.825rem', color: 'var(--text-secondary)', marginTop: '0.25rem', lineHeight: '1.5' }}>
-                    LinkedIn security headers block cross-origin iframe embedding to protect personal accounts. With the <strong>Companion Window</strong>, you get an anchored floating window next to your workspace that auto-updates whenever you click any company in Link Builder Pro!
+                    LinkedIn security headers block cross-origin iframe embedding to protect personal accounts. With the <strong>Companion Window</strong>, you get an anchored floating window next to your workspace that auto-updates whenever you click any company in Linkedin Utility!
                   </p>
                 </div>
               </div>

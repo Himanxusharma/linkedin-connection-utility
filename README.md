@@ -1,4 +1,4 @@
-# Link Builder Pro — LinkedIn People & Jobs Intelligence
+# Linkedin Utility — LinkedIn People & Jobs Intelligence
 
 A modern, production-grade web application built with **Next.js 15, React 19, TypeScript, and Google Cloud Firebase Firestore**, ready for 1-click deployment on **Vercel**.
 
@@ -93,7 +93,7 @@ npm run ingest [path-to-csv]
 1. Push your repository to GitHub:
    ```bash
    git add .
-   git commit -m "Deploy Link Builder Pro to Vercel"
+   git commit -m "Deploy Linkedin Utility to Vercel"
    git push origin main
    ```
 2. Go to [Vercel](https://vercel.com) and click **"Add New Project"** $\rightarrow$ Import this repository.
