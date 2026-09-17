@@ -8,7 +8,6 @@ import {
   Cloud,
   FileSpreadsheet,
   ShieldCheck,
-  Zap,
   Keyboard,
   HardDrive,
   AppWindow,
@@ -104,23 +103,6 @@ export const Header: React.FC<HeaderProps> = ({
                 <h1 style={{ fontSize: '1.35rem', fontWeight: 800, letterSpacing: '-0.025em', color: '#f8fafc' }}>
                   Link Builder <span style={{ color: '#38bdf8' }}>Pro</span>
                 </h1>
-                <span
-                  style={{
-                    fontSize: '0.7rem',
-                    fontWeight: 700,
-                    padding: '0.2rem 0.55rem',
-                    borderRadius: 'var(--radius-full)',
-                    background: 'rgba(99, 102, 241, 0.16)',
-                    color: '#a5b4fc',
-                    border: '1px solid rgba(99, 102, 241, 0.3)',
-                    letterSpacing: '0.04em',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '4px',
-                  }}
-                >
-                  <Zap size={11} color="#818cf8" /> NEXT.JS 15
-                </span>
               </div>
               <p style={{ fontSize: '0.825rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
                 LinkedIn People, Jobs & Careers link generator with pre-verified fintech database
