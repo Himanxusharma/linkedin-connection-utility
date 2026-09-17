@@ -10,6 +10,7 @@ import { KeyboardShortcutsModal } from '../components/KeyboardShortcutsModal';
 import { DataBackupModal } from '../components/DataBackupModal';
 import { CompanionDock } from '../components/CompanionDock';
 import { OutreachMessageModal } from '../components/OutreachMessageModal';
+import { SplitScreenGuideModal } from '../components/SplitScreenGuideModal';
 import { CompanyRecord, OutreachStatus } from '../types/company';
 import { LinkOpenMode, getSavedLinkOpenMode, saveLinkOpenMode, openOutreachUrl } from '../lib/navigation';
 import seedCompanies from '../data/seed-companies.json';
@@ -29,10 +30,11 @@ export default function Home() {
   const [isFirebaseModalOpen, setIsFirebaseModalOpen] = useState<boolean>(false);
   const [isShortcutsOpen, setIsShortcutsOpen] = useState<boolean>(false);
   const [isBackupModalOpen, setIsBackupModalOpen] = useState<boolean>(false);
+  const [isSplitGuideOpen, setIsSplitGuideOpen] = useState<boolean>(false);
   const [toasts, setToasts] = useState<ToastItem[]>([]);
 
-  // Outreach link open mode (companion | reusable-tab | new-tab)
-  const [linkOpenMode, setLinkOpenMode] = useState<LinkOpenMode>('companion');
+  // Outreach link open mode (split | companion | reusable-tab | new-tab)
+  const [linkOpenMode, setLinkOpenMode] = useState<LinkOpenMode>('split');
   const [activeCompanionCompany, setActiveCompanionCompany] = useState<CompanyRecord | null>(null);
 
   // Global Outreach Note Modal
@@ -226,8 +228,10 @@ export default function Home() {
     setLinkOpenMode(mode);
     saveLinkOpenMode(mode);
     showToast(
-      mode === 'companion'
-        ? '🖥️ Switched to Split Companion Window'
+      mode === 'split'
+        ? '🖥️ Switched to Split Screen Mode (Target Tab)'
+        : mode === 'companion'
+        ? '🪟 Switched to Floating Popup Window'
         : mode === 'reusable-tab'
         ? '📑 Switched to 1 Reusable Tab'
         : '🗂️ Switched to Classic New Tabs'
@@ -263,6 +267,7 @@ export default function Home() {
         onOpenFirebaseModal={() => setIsFirebaseModalOpen(true)}
         onOpenShortcuts={() => setIsShortcutsOpen(true)}
         onOpenBackupModal={() => setIsBackupModalOpen(true)}
+        onOpenSplitGuide={() => setIsSplitGuideOpen(true)}
         linkOpenMode={linkOpenMode}
         onChangeLinkOpenMode={handleChangeLinkOpenMode}
         onNotify={showToast}
@@ -373,6 +378,7 @@ export default function Home() {
             setMessageModalCompany(c);
             setIsMessageModalOpen(true);
           }}
+          onOpenSplitGuide={() => setIsSplitGuideOpen(true)}
           onNotify={showToast}
           linkOpenMode={linkOpenMode}
           onCloseDock={() => setActiveCompanionCompany(null)}
@@ -398,6 +404,14 @@ export default function Home() {
       <KeyboardShortcutsModal
         isOpen={isShortcutsOpen}
         onClose={() => setIsShortcutsOpen(false)}
+      />
+
+      {/* Split Screen Setup Guide Modal */}
+      <SplitScreenGuideModal
+        isOpen={isSplitGuideOpen}
+        onClose={() => setIsSplitGuideOpen(false)}
+        onNotify={showToast}
+        onChangeLinkOpenMode={handleChangeLinkOpenMode}
       />
 
       {/* Data Backup & Restore Modal */}

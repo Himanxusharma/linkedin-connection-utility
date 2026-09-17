@@ -1,8 +1,9 @@
 'use client';
 
-export type LinkOpenMode = 'companion' | 'reusable-tab' | 'new-tab';
+export type LinkOpenMode = 'split' | 'companion' | 'reusable-tab' | 'new-tab';
 
-export const DEFAULT_LINK_OPEN_MODE: LinkOpenMode = 'companion';
+export const DEFAULT_LINK_OPEN_MODE: LinkOpenMode = 'split';
+export const SPLIT_TAB_NAME = 'LinkedInWorkstation';
 
 export interface LinkOpenOptions {
   mode?: LinkOpenMode;
@@ -102,7 +103,7 @@ export function getSavedLinkOpenMode(): LinkOpenMode {
   if (typeof window === 'undefined') return DEFAULT_LINK_OPEN_MODE;
   try {
     const saved = localStorage.getItem('linkbuilder_open_mode') as LinkOpenMode;
-    if (saved === 'companion' || saved === 'reusable-tab' || saved === 'new-tab') {
+    if (saved === 'split' || saved === 'companion' || saved === 'reusable-tab' || saved === 'new-tab') {
       return saved;
     }
   } catch {
@@ -124,9 +125,18 @@ export function saveLinkOpenMode(mode: LinkOpenMode): void {
 }
 
 /**
+ * Launches or focuses the dedicated LinkedIn workstation tab for Chrome Split View.
+ */
+export function launchSplitScreenLinkedIn(): Window | null {
+  if (typeof window === 'undefined') return null;
+  return window.open('https://www.linkedin.com/feed/', SPLIT_TAB_NAME);
+}
+
+/**
  * Opens an outbound URL using the selected mode without cluttering tabs.
- * - 'companion': Reuses a dedicated floating window positioned side-by-side.
- * - 'reusable-tab': Reuses a single browser tab named 'LinkBuilderWorkstation'.
+ * - 'split': Reuses a dedicated target tab (SPLIT_TAB_NAME) designed for Chrome Split View / Snap.
+ * - 'companion': Reuses a floating popup window positioned on the right side of the screen.
+ * - 'reusable-tab': Legacy alias for reusable target tab.
  * - 'new-tab': Opens standard '_blank' new tab.
  */
 export function openOutreachUrl(
@@ -165,12 +175,18 @@ export function openOutreachUrl(
   }
 
   const mode = options?.mode || getSavedLinkOpenMode();
-  const targetName = options?.targetName || 'LinkBuilderCompanion';
+  const targetName = options?.targetName || (mode === 'companion' ? 'LinkBuilderCompanion' : SPLIT_TAB_NAME);
+
+  if (mode === 'split' || mode === 'reusable-tab') {
+    // Split Screen Target Tab: Opens clean browser tab without popup window features
+    // Designed for Chrome Split View, Edge Split Screen, macOS Tile Window, and Windows Snap
+    return window.open(url, SPLIT_TAB_NAME);
+  }
 
   if (mode === 'companion') {
     // On mobile, companion popup windows are not supported well; use single tab/reusable window
     if (isMobile) {
-      return window.open(url, 'LinkBuilderWorkstation');
+      return window.open(url, SPLIT_TAB_NAME);
     }
 
     // Calculate optimal split-screen size: right 55% of user's screen
@@ -213,13 +229,10 @@ export function openOutreachUrl(
       // Fallback if popup was blocked
       return window.open(url, targetName);
     }
-  } else if (mode === 'reusable-tab') {
-    // Reusable single browser tab
-    return window.open(url, 'LinkBuilderWorkstation');
-  } else {
-    // Classic new tab
-    return window.open(url, '_blank');
   }
+
+  // Classic new tab
+  return window.open(url, '_blank');
 }
 
 /**
@@ -230,7 +243,7 @@ export function getLinkTargetAttribute(mode: LinkOpenMode): string {
     // Direct navigation allows iOS Universal Links and Android App Links to open native app
     return '_self';
   }
+  if (mode === 'split' || mode === 'reusable-tab') return SPLIT_TAB_NAME;
   if (mode === 'companion') return 'LinkBuilderCompanion';
-  if (mode === 'reusable-tab') return 'LinkBuilderWorkstation';
   return '_blank';
 }

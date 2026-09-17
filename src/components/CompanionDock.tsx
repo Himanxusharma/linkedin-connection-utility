@@ -15,6 +15,7 @@ import {
   Maximize2,
   Minimize2,
   Smartphone,
+  Columns,
 } from 'lucide-react';
 import { CompanyRecord, OutreachStatus } from '../types/company';
 import { buildPeopleUrl, buildJobsUrl } from '../lib/slug-heuristics';
@@ -27,6 +28,7 @@ interface CompanionDockProps {
   outreachStatus: OutreachStatus;
   onUpdateStatus: (status: OutreachStatus) => void;
   onOpenMessageModal: (company: CompanyRecord) => void;
+  onOpenSplitGuide?: () => void;
   targetRoleKeyword?: string;
   onNotify: (msg: string) => void;
   linkOpenMode: LinkOpenMode;
@@ -40,6 +42,7 @@ export const CompanionDock: React.FC<CompanionDockProps> = ({
   outreachStatus,
   onUpdateStatus,
   onOpenMessageModal,
+  onOpenSplitGuide,
   targetRoleKeyword,
   onNotify,
   linkOpenMode,
@@ -183,6 +186,16 @@ export const CompanionDock: React.FC<CompanionDockProps> = ({
 
             {/* Dock Controls */}
             <div className="companion-dock-controls" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+              {onOpenSplitGuide && (
+                <button
+                  className="btn btn-outline"
+                  onClick={onOpenSplitGuide}
+                  style={{ padding: '0.35rem', border: 'none', background: 'transparent' }}
+                  title="Open Chrome Split Screen Setup Guide"
+                >
+                  <Columns size={15} color="#38bdf8" />
+                </button>
+              )}
               <button
                 className="btn btn-outline"
                 onClick={() => setIsMinimized(!isMinimized)}

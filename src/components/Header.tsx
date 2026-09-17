@@ -13,6 +13,7 @@ import {
   HardDrive,
   AppWindow,
   Smartphone,
+  Columns,
 } from 'lucide-react';
 import { isFirebaseConfigured } from '../lib/firebase';
 import {
@@ -30,6 +31,7 @@ interface HeaderProps {
   onOpenFirebaseModal: () => void;
   onOpenShortcuts?: () => void;
   onOpenBackupModal?: () => void;
+  onOpenSplitGuide?: () => void;
   linkOpenMode?: LinkOpenMode;
   onChangeLinkOpenMode?: (mode: LinkOpenMode) => void;
   onNotify?: (msg: string) => void;
@@ -43,6 +45,7 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenFirebaseModal,
   onOpenShortcuts,
   onOpenBackupModal,
+  onOpenSplitGuide,
   linkOpenMode = 'companion',
   onChangeLinkOpenMode,
   onNotify,
@@ -264,7 +267,7 @@ export const Header: React.FC<HeaderProps> = ({
                   backgroundColor: 'rgba(15, 23, 42, 0.85)',
                   border: '1px solid rgba(56, 189, 248, 0.35)',
                 }}
-                title="Choose how links open: Split Companion window, 1 Reusable Tab, or New Tabs"
+                title="Choose how links open: Chrome Split Tab (Recommended), Floating Popup, or New Tabs"
               >
                 <AppWindow size={14} color="#38bdf8" />
                 <select
@@ -281,17 +284,43 @@ export const Header: React.FC<HeaderProps> = ({
                     outline: 'none',
                   }}
                 >
+                  <option value="split" style={{ backgroundColor: '#0f172a', color: '#f8fafc' }}>
+                    🖥️ Split Screen (Chrome / Snap)
+                  </option>
                   <option value="companion" style={{ backgroundColor: '#0f172a', color: '#f8fafc' }}>
-                    🖥️ Companion (Split)
+                    🪟 Floating Popup Window
                   </option>
                   <option value="reusable-tab" style={{ backgroundColor: '#0f172a', color: '#f8fafc' }}>
                     📑 1 Reusable Tab
                   </option>
                   <option value="new-tab" style={{ backgroundColor: '#0f172a', color: '#f8fafc' }}>
-                    🗂️ New Tabs
+                    🗂️ Classic New Tabs
                   </option>
                 </select>
               </div>
+            )}
+
+            {/* Split Screen Guide Button */}
+            {onOpenSplitGuide && (
+              <button
+                className="btn btn-outline"
+                onClick={onOpenSplitGuide}
+                style={{
+                  padding: '0.35rem 0.7rem',
+                  fontSize: '0.78rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '5px',
+                  borderColor: 'rgba(56, 189, 248, 0.45)',
+                  color: '#38bdf8',
+                  background: 'rgba(56, 189, 248, 0.1)',
+                  fontWeight: 600,
+                }}
+                title="How to set up Chrome Split Screen / Side-by-Side mode"
+              >
+                <Columns size={13} color="#38bdf8" />
+                <span>Split Guide</span>
+              </button>
             )}
           </div>
         </div>
