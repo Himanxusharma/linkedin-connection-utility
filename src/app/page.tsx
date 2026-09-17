@@ -457,6 +457,9 @@ export default function Home() {
             <ShieldAlert size={14} color="#f59e0b" />
             Zero bots · Zero scraping · Fully compliant with LinkedIn Terms of Service. Ready for 1-click Vercel deployment.
           </p>
+          <p style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '0.5rem' }}>
+            © {new Date().getFullYear()} Link Builder Pro. All rights reserved.
+          </p>
         </div>
       </footer>
     </main>
