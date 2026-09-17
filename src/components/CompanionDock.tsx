@@ -128,20 +128,9 @@ export const CompanionDock: React.FC<CompanionDockProps> = ({
   };
 
   return (
-    <div
-      style={{
-        position: 'fixed',
-        bottom: '1.25rem',
-        left: '50%',
-        transform: 'translateX(-50%)',
-        zIndex: 1000,
-        width: 'calc(100% - 2.5rem)',
-        maxWidth: '920px',
-        animation: 'slideUpFade 0.25s cubic-bezier(0.16, 1, 0.3, 1)',
-      }}
-    >
+    <div className="companion-dock-container">
       <div
-        className="glass-card"
+        className="glass-card companion-dock-card"
         style={{
           backgroundColor: '#090d16',
           border: '1px solid rgba(56, 189, 248, 0.35)',
@@ -151,58 +140,72 @@ export const CompanionDock: React.FC<CompanionDockProps> = ({
           transition: 'all 0.2s ease',
         }}
       >
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: '1rem',
-            flexWrap: 'wrap',
-          }}
-        >
-          {/* Active Company Badge */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-            <div
-              style={{
-                width: '34px',
-                height: '34px',
-                borderRadius: '8px',
-                background: 'linear-gradient(135deg, #0284c7 0%, #06b6d4 100%)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                flexShrink: 0,
-              }}
-            >
-              <AppWindow size={18} color="#fff" />
+        <div className="companion-dock-inner">
+          {/* Active Company Badge & Mobile Header Controls */}
+          <div className="companion-dock-header">
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+              <div
+                style={{
+                  width: '34px',
+                  height: '34px',
+                  borderRadius: '8px',
+                  background: 'linear-gradient(135deg, #0284c7 0%, #06b6d4 100%)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0,
+                }}
+              >
+                <AppWindow size={18} color="#fff" />
+              </div>
+
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                  <span style={{ fontSize: '0.7rem', color: '#38bdf8', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                    Companion Active
+                  </span>
+                  {currentIndex >= 0 && (
+                    <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
+                      #{currentIndex + 1} of {allCompanies.length}
+                    </span>
+                  )}
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                  <span style={{ fontSize: '0.95rem', fontWeight: 800, color: '#f8fafc' }}>
+                    {activeCompany.name}
+                  </span>
+                  <code style={{ fontSize: '0.72rem', color: '#94a3b8', fontFamily: 'var(--font-mono)' }}>
+                    {activeCompany.slug}
+                  </code>
+                </div>
+              </div>
             </div>
 
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-                <span style={{ fontSize: '0.7rem', color: '#38bdf8', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                  Companion Active
-                </span>
-                {currentIndex >= 0 && (
-                  <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
-                    #{currentIndex + 1} of {allCompanies.length}
-                  </span>
-                )}
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-                <span style={{ fontSize: '0.95rem', fontWeight: 800, color: '#f8fafc' }}>
-                  {activeCompany.name}
-                </span>
-                <code style={{ fontSize: '0.72rem', color: '#94a3b8', fontFamily: 'var(--font-mono)' }}>
-                  {activeCompany.slug}
-                </code>
-              </div>
+            {/* Dock Controls */}
+            <div className="companion-dock-controls" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <button
+                className="btn btn-outline"
+                onClick={() => setIsMinimized(!isMinimized)}
+                style={{ padding: '0.35rem', border: 'none', background: 'transparent' }}
+                title={isMinimized ? 'Expand Dock' : 'Minimize Dock'}
+              >
+                {isMinimized ? <Maximize2 size={15} /> : <Minimize2 size={15} />}
+              </button>
+              <button
+                className="btn btn-outline"
+                onClick={onCloseDock}
+                style={{ padding: '0.35rem', border: 'none', background: 'transparent' }}
+                title="Close Companion Dock"
+              >
+                <X size={15} />
+              </button>
             </div>
           </div>
 
           {!isMinimized && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+            <div className="companion-dock-actions">
               {/* Steer Links */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexWrap: 'nowrap' }}>
                 <button
                   className="btn btn-secondary"
                   onClick={() => handleOpenLink('people')}
@@ -325,26 +328,6 @@ export const CompanionDock: React.FC<CompanionDockProps> = ({
               </div>
             </div>
           )}
-
-          {/* Dock Controls */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-            <button
-              className="btn btn-outline"
-              onClick={() => setIsMinimized(!isMinimized)}
-              style={{ padding: '0.35rem', border: 'none', background: 'transparent' }}
-              title={isMinimized ? 'Expand Dock' : 'Minimize Dock'}
-            >
-              {isMinimized ? <Maximize2 size={15} /> : <Minimize2 size={15} />}
-            </button>
-            <button
-              className="btn btn-outline"
-              onClick={onCloseDock}
-              style={{ padding: '0.35rem', border: 'none', background: 'transparent' }}
-              title="Close Companion Dock"
-            >
-              <X size={15} />
-            </button>
-          </div>
         </div>
       </div>
     </div>

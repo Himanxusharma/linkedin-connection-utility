@@ -595,6 +595,114 @@ body {
   .mobile-hide {
     display: none !important;
   }
+
+  /* Responsive Companion Dock */
+  .companion-dock-container {
+    bottom: 0.5rem !important;
+    width: calc(100% - 1rem) !important;
+    max-width: calc(100% - 1rem) !important;
+  }
+
+  .companion-dock-card {
+    padding: 0.5rem 0.75rem !important;
+    border-radius: var(--radius-lg) !important;
+  }
+
+  .companion-dock-inner {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 0.5rem !important;
+  }
+
+  .companion-dock-header {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    width: 100% !important;
+  }
+
+  .companion-dock-actions {
+    display: flex !important;
+    align-items: center !important;
+    gap: 0.35rem !important;
+    overflow-x: auto !important;
+    width: 100% !important;
+    padding-bottom: 2px !important;
+    -webkit-overflow-scrolling: touch !important;
+    scrollbar-width: none !important;
+  }
+
+  .companion-dock-actions::-webkit-scrollbar {
+    display: none !important;
+  }
+
+  .companion-dock-actions .btn,
+  .companion-dock-actions select {
+    flex-shrink: 0 !important;
+  }
+
+  /* Responsive Drawer Header */
+  .drawer-header-responsive {
+    padding: 0.875rem 1rem !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 0.65rem !important;
+  }
+
+  .drawer-header-actions-responsive {
+    display: flex !important;
+    align-items: center !important;
+    gap: 0.35rem !important;
+    overflow-x: auto !important;
+    width: 100% !important;
+    padding-bottom: 2px !important;
+    -webkit-overflow-scrolling: touch !important;
+    scrollbar-width: none !important;
+  }
+
+  .drawer-header-actions-responsive::-webkit-scrollbar {
+    display: none !important;
+  }
+
+  .drawer-header-actions-responsive .btn,
+  .drawer-header-actions-responsive select {
+    flex-shrink: 0 !important;
+  }
+}
+
+/* Base Companion Dock desktop layout */
+.companion-dock-container {
+  position: fixed;
+  bottom: 1.25rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1000;
+  width: calc(100% - 2.5rem);
+  max-width: 920px;
+  animation: slideUpFade 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.companion-dock-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.companion-dock-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex: 1 1 auto;
+  min-width: 220px;
+}
+
+.companion-dock-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
 }
 
 /* Ultra-compact Phones (max-width: 400px - iPhone SE, Galaxy Z Flip cover) */

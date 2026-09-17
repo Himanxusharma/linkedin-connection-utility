@@ -154,6 +154,7 @@ export const CompanyExplorerDrawer: React.FC<CompanyExplorerDrawerProps> = ({
       >
         {/* Drawer Header */}
         <div
+          className="drawer-header-responsive"
           style={{
             padding: '1.25rem 1.5rem',
             borderBottom: '1px solid var(--border-subtle)',
@@ -161,6 +162,8 @@ export const CompanyExplorerDrawer: React.FC<CompanyExplorerDrawerProps> = ({
             alignItems: 'center',
             justifyContent: 'space-between',
             background: 'rgba(15, 23, 42, 0.85)',
+            flexWrap: 'wrap',
+            gap: '0.75rem',
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.875rem' }}>
@@ -215,7 +218,7 @@ export const CompanyExplorerDrawer: React.FC<CompanyExplorerDrawerProps> = ({
             </div>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <div className="drawer-header-actions-responsive" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
             {onToggleStar && (
               <button
                 className={`star-btn ${isStarred ? 'starred' : ''}`}
