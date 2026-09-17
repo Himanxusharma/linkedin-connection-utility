@@ -1,6 +1,6 @@
 # Functional Requirements Document (FRD)
 
-**Product:** Link Builder — Company People & Jobs Page Generator
+**Product:** Linkedin Utility — Company People & Jobs Page Generator
 **Scope:** v1 (client-side, single-page tool)
 
 ## 1. Input

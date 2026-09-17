@@ -38,7 +38,7 @@ Turn company names into verified LinkedIn **People** and **Jobs** page links, wi
    - **Companion Window Mode:** Anchored floating window that auto-navigates as you click different companies—browse 50+ companies in seconds without cluttering your browser with 50 tabs!
    - **Embedded Iframe Sandbox:** Live preview of supported company careers pages.
 
-6. **Custom Link Builder Workspace**
+6. **Custom Linkedin Utility Workspace**
    - Paste company names or drag & drop a `.csv` file.
    - Automatic cross-matching against the verified database (🟢 Verified vs 🟡 Guess).
    - Heuristic slug generation stripping corporate suffixes (`Ltd`, `Inc`, `LLC`, `Corp`, `LLP`, `GmbH`, `Co`).

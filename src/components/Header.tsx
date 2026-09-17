@@ -101,7 +101,7 @@ export const Header: React.FC<HeaderProps> = ({
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
                 <h1 style={{ fontSize: '1.35rem', fontWeight: 800, letterSpacing: '-0.025em', color: '#f8fafc' }}>
-                  Link Builder <span style={{ color: '#38bdf8' }}>Pro</span>
+                  Linkedin Utility <span style={{ color: '#38bdf8' }}>Pro</span>
                 </h1>
               </div>
               <p style={{ fontSize: '0.825rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
@@ -381,7 +381,7 @@ export const Header: React.FC<HeaderProps> = ({
             }}
           >
             <FileSpreadsheet size={18} color={activeTab === 'workspace' ? '#06b6d4' : 'var(--text-muted)'} />
-            Custom Link Builder Workspace
+            Custom Linkedin Utility Workspace
           </button>
         </div>
       </div>

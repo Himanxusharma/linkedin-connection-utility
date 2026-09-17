@@ -1,6 +1,6 @@
 # Product Requirements Document (PRD)
 
-**Product:** Link Builder — Company People & Jobs Page Generator
+**Product:** Linkedin Utility — Company People & Jobs Page Generator
 **Owner:** You
 **Status:** MVP built and live (v1)
 

@@ -177,7 +177,7 @@ export const SplitScreenGuideModal: React.FC<SplitScreenGuideModalProps> = ({
                 </h3>
               </div>
               <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '2px' }}>
-                Opens the dedicated LinkedIn workstation tab that Link Builder will steer.
+                Opens the dedicated LinkedIn workstation tab that Linkedin Utility will steer.
               </p>
             </div>
 

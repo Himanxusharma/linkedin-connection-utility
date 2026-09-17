@@ -1,6 +1,6 @@
 # Technical Requirements Document (TRD)
 
-**Product:** Link Builder — Company People & Jobs Page Generator
+**Product:** Linkedin Utility — Company People & Jobs Page Generator
 **Architecture:** Single static HTML file, fully client-side. No backend, no database, no API keys, no build step.
 
 ## 1. Stack

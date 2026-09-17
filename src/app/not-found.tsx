@@ -43,7 +43,7 @@ export default function NotFound() {
           The page or resource you are looking for does not exist.
         </p>
         <Link href="/" className="btn btn-primary" style={{ marginTop: '0.5rem' }}>
-          <Home size={15} /> Back to Link Builder
+          <Home size={15} /> Back to Linkedin Utility
         </Link>
       </div>
     </div>
