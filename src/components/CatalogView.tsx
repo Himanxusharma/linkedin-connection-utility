@@ -287,7 +287,17 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
       }
       return sortOrder === 'asc' ? comparison : -comparison;
     });
-  }, [companies, selectedCategory, searchQuery, selectedStatusFilter, sortField, sortOrder, activeOutreachMap]);
+  }, [
+    companies,
+    selectedCategory,
+    searchQuery,
+    selectedStatusFilter,
+    sortField,
+    sortOrder,
+    activeOutreachMap,
+    showStarredOnly,
+    starredSet,
+  ]);
 
   const handleSort = (field: SortField) => {
     let nextOrder: 'asc' | 'desc' = 'asc';
@@ -873,6 +883,9 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
                 setSearchQuery('');
                 onNotify(`⭐ Showing all ${starredSet ? starredSet.size : 0} Starred Companies`);
               } else {
+                setSelectedCategory('All');
+                setSelectedStatusFilter('all');
+                setSearchQuery('');
                 onNotify('Viewing all companies');
               }
             }}
@@ -920,6 +933,10 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
                 onClick={() => {
                   setSelectedCategory(cat);
                   setShowStarredOnly(false);
+                  if (cat === 'All') {
+                    setSelectedStatusFilter('all');
+                    setSearchQuery('');
+                  }
                   onNotify(`Viewing ${cat} (${count} companies)`);
                 }}
                 style={{
