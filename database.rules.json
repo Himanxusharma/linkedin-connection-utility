@@ -1,0 +1,14 @@
+{
+  "rules": {
+    "companies": {
+      ".read": true,
+      ".write": true
+    },
+    "users": {
+      "$userId": {
+        ".read": true,
+        ".write": true
+      }
+    }
+  }
+}

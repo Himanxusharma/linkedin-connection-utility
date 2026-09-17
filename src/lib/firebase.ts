@@ -11,6 +11,13 @@ import {
   setDoc,
   Firestore,
 } from 'firebase/firestore';
+import {
+  getDatabase,
+  ref as rtdbRef,
+  get as rtdbGet,
+  set as rtdbSet,
+  Database,
+} from 'firebase/database';
 import { CompanyRecord, UserOutreachData } from '../types/company';
 import seedCompaniesRaw from '../data/seed-companies.json';
 
@@ -23,6 +30,11 @@ const firebaseConfig = {
   storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
   messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
+  databaseURL:
+    process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL ||
+    (process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID
+      ? `https://${process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID}-default-rtdb.firebaseio.com`
+      : undefined),
 };
 
 export const isFirebaseConfigured = (): boolean => {
@@ -34,11 +46,18 @@ export const isFirebaseConfigured = (): boolean => {
 
 let app: FirebaseApp | null = null;
 let db: Firestore | null = null;
+let rtdb: Database | null = null;
 
 if (typeof window !== 'undefined' && isFirebaseConfigured()) {
   try {
     app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
-    // Enable Multi-Tab IndexedDB offline persistent caching for instant reads and offline writes
+    // Initialize Realtime Database
+    try {
+      rtdb = getDatabase(app);
+    } catch (err) {
+      console.warn('Realtime Database init note:', err);
+    }
+    // Initialize Firestore with Multi-Tab IndexedDB offline persistent caching
     try {
       db = initializeFirestore(app, {
         localCache: persistentLocalCache({
@@ -46,7 +65,6 @@ if (typeof window !== 'undefined' && isFirebaseConfigured()) {
         }),
       });
     } catch {
-      // If already initialized (e.g. fast refresh), retrieve instance
       db = getFirestore(app);
     }
   } catch (err) {
@@ -56,33 +74,61 @@ if (typeof window !== 'undefined' && isFirebaseConfigured()) {
 
 /**
  * Loads all companies.
- * Tries Firestore if configured; falls back to seed dataset.
+ * Tries Realtime Database & Firestore if configured; falls back to seed dataset.
  */
 export async function getCompanies(): Promise<{
   companies: CompanyRecord[];
   fromCloud: boolean;
 }> {
-  if (db && isFirebaseConfigured()) {
-    try {
-      const colRef = collection(db, 'companies');
-      const snapshot = await getDocs(colRef);
-      if (!snapshot.empty) {
-        const cloudData: CompanyRecord[] = [];
-        snapshot.forEach((d) => cloudData.push(d.data() as CompanyRecord));
-        // Merge cloud with seed to avoid missing records
-        const map = new Map<string, CompanyRecord>();
-        seedCompanies.forEach((c) => map.set(c.name.toLowerCase(), c));
-        cloudData.forEach((c) => map.set(c.name.toLowerCase(), c));
-        const merged = Array.from(map.values()).sort((a, b) => {
-          if (a.rank && b.rank) return a.rank - b.rank;
-          if (a.rank) return -1;
-          if (b.rank) return 1;
-          return a.name.localeCompare(b.name);
-        });
-        return { companies: merged, fromCloud: true };
+  if (isFirebaseConfigured()) {
+    // 1. Try Realtime Database
+    if (rtdb) {
+      try {
+        const compRef = rtdbRef(rtdb, 'companies');
+        const snapshot = await rtdbGet(compRef);
+        if (snapshot.exists()) {
+          const val = snapshot.val();
+          const cloudData: CompanyRecord[] = Object.values(val);
+          if (cloudData.length > 0) {
+            const map = new Map<string, CompanyRecord>();
+            seedCompanies.forEach((c) => map.set(c.name.toLowerCase(), c));
+            cloudData.forEach((c) => map.set(c.name.toLowerCase(), c));
+            const merged = Array.from(map.values()).sort((a, b) => {
+              if (a.rank && b.rank) return a.rank - b.rank;
+              if (a.rank) return -1;
+              if (b.rank) return 1;
+              return a.name.localeCompare(b.name);
+            });
+            return { companies: merged, fromCloud: true };
+          }
+        }
+      } catch (err) {
+        console.warn('Realtime Database fetch note:', err);
       }
-    } catch (err) {
-      console.warn('Firestore fetch failed, falling back to local seed:', err);
+    }
+
+    // 2. Try Firestore
+    if (db) {
+      try {
+        const colRef = collection(db, 'companies');
+        const snapshot = await getDocs(colRef);
+        if (!snapshot.empty) {
+          const cloudData: CompanyRecord[] = [];
+          snapshot.forEach((d) => cloudData.push(d.data() as CompanyRecord));
+          const map = new Map<string, CompanyRecord>();
+          seedCompanies.forEach((c) => map.set(c.name.toLowerCase(), c));
+          cloudData.forEach((c) => map.set(c.name.toLowerCase(), c));
+          const merged = Array.from(map.values()).sort((a, b) => {
+            if (a.rank && b.rank) return a.rank - b.rank;
+            if (a.rank) return -1;
+            if (b.rank) return 1;
+            return a.name.localeCompare(b.name);
+          });
+          return { companies: merged, fromCloud: true };
+        }
+      } catch (err) {
+        console.warn('Firestore fetch failed, falling back to local seed:', err);
+      }
     }
   }
 
@@ -90,27 +136,47 @@ export async function getCompanies(): Promise<{
 }
 
 /**
- * Saves a company record to Firestore (if configured) or updates local memory/storage.
+ * Saves a company record to Realtime Database / Firestore or updates local memory/storage.
  */
 export async function saveCompany(
   company: CompanyRecord
 ): Promise<{ success: boolean; cloudSaved: boolean }> {
+  let savedCloud = false;
+  const rawKey = company.slug || company.id || company.name.toLowerCase();
+  const safeKey = rawKey.toLowerCase().replace(/[^a-z0-9_-]/g, '-');
+
+  if (rtdb && isFirebaseConfigured()) {
+    try {
+      const compRef = rtdbRef(rtdb, `companies/${safeKey}`);
+      await rtdbSet(compRef, {
+        ...company,
+        updatedAt: new Date().toISOString(),
+      });
+      savedCloud = true;
+    } catch (err) {
+      console.warn('RTDB save company note:', err);
+    }
+  }
+
   if (db && isFirebaseConfigured()) {
     try {
-      const docId = company.slug || company.name.toLowerCase().replace(/[^a-z0-9]/g, '-');
-      const docRef = doc(db, 'companies', docId);
+      const docRef = doc(db, 'companies', safeKey);
       await setDoc(docRef, {
         ...company,
         updatedAt: new Date().toISOString(),
       }, { merge: true });
-      return { success: true, cloudSaved: true };
-    } catch (err) {
-      console.error('Failed to save to Firestore:', err);
-      return { success: false, cloudSaved: false };
+      savedCloud = true;
+    } catch {
+      // ignore
     }
   }
 
-  // If Firebase is not configured, save to localStorage
+  // If cloud write succeeded, return early
+  if (savedCloud) {
+    return { success: true, cloudSaved: true };
+  }
+
+  // If Firebase is not configured or offline, save to localStorage
   if (typeof window !== 'undefined') {
     try {
       const localCustom = JSON.parse(localStorage.getItem('custom_companies') || '{}');
@@ -135,28 +201,45 @@ export const isClerkConfigured = (): boolean => {
 
 /**
  * Loads a user's persistent profile data (outreach statuses, notes, starred companies, custom additions)
- * from Cloud Firestore `users/{userId}`.
+ * Supports both Cloud Firestore and Firebase Realtime Database.
  */
 export async function getUserData(userId: string): Promise<UserOutreachData | null> {
-  if (!db || !isFirebaseConfigured() || !userId) {
+  if (!isFirebaseConfigured() || !userId) {
     return null;
   }
-  try {
-    const userDocRef = doc(db, 'users', userId);
-    const userSnap = await getDoc(userDocRef);
-    if (userSnap.exists()) {
-      return userSnap.data() as UserOutreachData;
+
+  // 1. Try Realtime Database first if configured
+  if (rtdb) {
+    try {
+      const userRef = rtdbRef(rtdb, `users/${userId}`);
+      const snap = await rtdbGet(userRef);
+      if (snap.exists()) {
+        return snap.val() as UserOutreachData;
+      }
+    } catch (err) {
+      console.warn('Realtime Database read attempt:', err);
     }
-    return null;
-  } catch (err) {
-    console.warn('Could not fetch user data from Firestore:', err);
-    return null;
   }
+
+  // 2. Fallback to Cloud Firestore
+  if (db) {
+    try {
+      const userDocRef = doc(db, 'users', userId);
+      const userSnap = await getDoc(userDocRef);
+      if (userSnap.exists()) {
+        return userSnap.data() as UserOutreachData;
+      }
+    } catch (err) {
+      console.warn('Firestore read attempt:', err);
+    }
+  }
+
+  return null;
 }
 
 /**
  * Persists a user's outreach state, personal notes, starred companies, and custom additions
- * directly to Cloud Firestore `users/{userId}`.
+ * directly to Firebase Realtime Database and Cloud Firestore.
  */
 export async function saveUserData(
   userId: string,
@@ -166,6 +249,23 @@ export async function saveUserData(
     return { success: false, cloudSaved: false };
   }
 
+  let saved = false;
+
+  // 1. Save to Realtime Database
+  if (rtdb && isFirebaseConfigured()) {
+    try {
+      const userRef = rtdbRef(rtdb, `users/${userId}`);
+      await rtdbSet(userRef, {
+        ...data,
+        updatedAt: new Date().toISOString(),
+      });
+      saved = true;
+    } catch (err) {
+      console.warn('Failed to save to Realtime Database:', err);
+    }
+  }
+
+  // 2. Also save to Firestore if active
   if (db && isFirebaseConfigured()) {
     try {
       const userDocRef = doc(db, 'users', userId);
@@ -177,13 +277,12 @@ export async function saveUserData(
         },
         { merge: true }
       );
-      return { success: true, cloudSaved: true };
+      saved = true;
     } catch (err) {
-      console.error('Failed to persist user data to Firestore:', err);
-      return { success: false, cloudSaved: false };
+      // ignore if only RTDB enabled
     }
   }
 
-  return { success: true, cloudSaved: false };
+  return { success: saved, cloudSaved: saved };
 }
 

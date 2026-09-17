@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "ingest": "tsx scripts/ingest.ts"
+    "ingest": "tsx scripts/ingest.ts",
+    "migrate:rtdb": "tsx scripts/migrate-rtdb.ts"
   },
   "dependencies": {
     "@clerk/nextjs": "^7.9.4",

@@ -114,10 +114,10 @@ CLERK_SECRET_KEY=sk_test_...`;
           </div>
           <div>
             <h3 style={{ fontSize: '1.2rem', fontWeight: 700, color: '#f8fafc' }}>
-              Google Cloud Firebase Firestore
+              Firebase Cloud Database
             </h3>
             <p style={{ fontSize: '0.825rem', color: 'var(--text-secondary)' }}>
-              Dual Storage Engine: Local Seed Dataset + Cloud Persistence
+              Realtime Database & Firestore Cloud Persistence Active
             </p>
           </div>
         </div>
