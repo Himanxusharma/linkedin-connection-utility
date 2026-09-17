@@ -237,8 +237,20 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
   const filteredCompanies = useMemo(() => {
     const filtered = companies.filter((c) => {
       const compKey = c.slug || c.name;
-      if (showStarredOnly && (!starredSet || !starredSet.has(compKey))) {
-        return false;
+      if (showStarredOnly) {
+        if (!starredSet || !starredSet.has(compKey)) {
+          return false;
+        }
+        // When Starred is active, show all starred companies without requiring any category or status filter
+        const q = searchQuery.trim().toLowerCase();
+        if (q) {
+          return (
+            c.name.toLowerCase().includes(q) ||
+            c.slug.toLowerCase().includes(q) ||
+            c.category.toLowerCase().includes(q)
+          );
+        }
+        return true;
       }
 
       const matchesCategory =
@@ -845,7 +857,16 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
 
           {/* ⭐ Starred Filter Pill */}
           <button
-            onClick={() => setShowStarredOnly(!showStarredOnly)}
+            onClick={() => {
+              const next = !showStarredOnly;
+              setShowStarredOnly(next);
+              if (next) {
+                // When clicking Starred, immediately show all starred companies without needing other filters
+                setSelectedCategory('All');
+                setSelectedStatusFilter('all');
+                setSearchQuery('');
+              }
+            }}
             style={{
               background: showStarredOnly ? 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)' : 'rgba(30, 41, 59, 0.7)',
               color: showStarredOnly ? '#000000' : (starredSet && starredSet.size > 0 ? '#fbbf24' : 'var(--text-secondary)'),
@@ -863,7 +884,7 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
               boxShadow: showStarredOnly ? '0 2px 10px rgba(245, 158, 11, 0.4)' : 'none',
               flexShrink: 0,
             }}
-            title="Filter by your starred / bookmarked companies"
+            title="Show all starred companies"
             aria-pressed={showStarredOnly}
           >
             <Star size={13} fill={showStarredOnly || (starredSet && starredSet.size > 0) ? '#facc15' : 'transparent'} />
@@ -883,11 +904,14 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
           </button>
           {categories.map((cat) => {
             const count = cat === 'All' ? companies.length : categoryCounts.get(cat) || 0;
-            const isSelected = selectedCategory === cat;
+            const isSelected = !showStarredOnly && selectedCategory === cat;
             return (
               <button
                 key={cat}
-                onClick={() => setSelectedCategory(cat)}
+                onClick={() => {
+                  setSelectedCategory(cat);
+                  setShowStarredOnly(false);
+                }}
                 style={{
                   background: isSelected ? 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)' : 'rgba(30, 41, 59, 0.7)',
                   color: isSelected ? '#ffffff' : 'var(--text-secondary)',
@@ -1153,12 +1177,18 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
               <tr>
                 <td colSpan={9} style={{ textAlign: 'center', padding: '4rem 1rem' }}>
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.75rem' }}>
-                    <Search size={32} color="var(--text-muted)" />
+                    {showStarredOnly ? (
+                      <Star size={32} color="#facc15" fill="#facc15" style={{ opacity: 0.8 }} />
+                    ) : (
+                      <Search size={32} color="var(--text-muted)" />
+                    )}
                     <div style={{ fontWeight: 700, fontSize: '1rem', color: 'var(--text-primary)' }}>
-                      No companies match your query
+                      {showStarredOnly ? 'No starred companies yet' : 'No companies match your query'}
                     </div>
-                    <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', maxWidth: '400px' }}>
-                      Try searching with a broader keyword, or click below to reset filters.
+                    <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', maxWidth: '420px', lineHeight: 1.5 }}>
+                      {showStarredOnly
+                        ? 'Click the star icon (★) on any company row or explorer drawer to bookmark your favorite companies here.'
+                        : 'Try searching with a broader keyword, or click below to reset filters.'}
                     </p>
                     <button
                       className="btn btn-secondary"
@@ -1167,9 +1197,10 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
                         setSearchQuery('');
                         setSelectedCategory('All');
                         setSelectedStatusFilter('all');
+                        setShowStarredOnly(false);
                       }}
                     >
-                      Reset Search & Filters
+                      {showStarredOnly ? 'View All Companies' : 'Reset Search & Filters'}
                     </button>
                   </div>
                 </td>
