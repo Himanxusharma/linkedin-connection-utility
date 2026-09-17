@@ -13,8 +13,13 @@ import {
   AppWindow,
   Smartphone,
   Columns,
+  User,
+  LogIn,
+  CheckCircle2,
+  RefreshCw,
 } from 'lucide-react';
-import { isFirebaseConfigured } from '../lib/firebase';
+import { SignedIn, SignedOut, SignInButton, UserButton, useUser } from '@clerk/nextjs';
+import { isFirebaseConfigured, isClerkConfigured } from '../lib/firebase';
 import {
   LinkOpenMode,
   isMobileDevice,
@@ -34,6 +39,8 @@ interface HeaderProps {
   linkOpenMode?: LinkOpenMode;
   onChangeLinkOpenMode?: (mode: LinkOpenMode) => void;
   onNotify?: (msg: string) => void;
+  isSyncing?: boolean;
+  lastCloudSynced?: Date | null;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -48,8 +55,12 @@ export const Header: React.FC<HeaderProps> = ({
   linkOpenMode = 'companion',
   onChangeLinkOpenMode,
   onNotify,
+  isSyncing = false,
+  lastCloudSynced = null,
 }) => {
   const isCloud = isFirebaseConfigured();
+  const isClerk = isClerkConfigured();
+  const { user, isLoaded: isUserLoaded, isSignedIn } = useUser();
   const [isMobile, setIsMobile] = useState<boolean>(false);
   const [mobileAppRedirect, setMobileAppRedirect] = useState<boolean>(true);
 
@@ -304,6 +315,110 @@ export const Header: React.FC<HeaderProps> = ({
                 <span>Split Guide</span>
               </button>
             )}
+
+            {/* Clerk Authentication & Cloud Sync Section */}
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.65rem',
+                paddingLeft: '0.5rem',
+                borderLeft: '1px solid rgba(255, 255, 255, 0.12)',
+              }}
+            >
+              {isClerk ? (
+                <>
+                  <SignedIn>
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.5rem',
+                        background: 'rgba(15, 23, 42, 0.7)',
+                        border: '1px solid rgba(99, 102, 241, 0.35)',
+                        borderRadius: 'var(--radius-full)',
+                        padding: '0.2rem 0.6rem 0.2rem 0.4rem',
+                      }}
+                      title={
+                        isSyncing
+                          ? 'Syncing changes to Firebase...'
+                          : lastCloudSynced
+                          ? `Cloud Synced: ${lastCloudSynced.toLocaleTimeString()}`
+                          : 'Persistent Cloud Profile Active'
+                      }
+                    >
+                      <UserButton
+                        appearance={{
+                          elements: {
+                            avatarBox: { width: 28, height: 28 },
+                          },
+                        }}
+                      />
+                      <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.1 }}>
+                        <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#f8fafc' }}>
+                          {user?.firstName || user?.username || 'User'}
+                        </span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
+                          {isSyncing ? (
+                            <>
+                              <RefreshCw
+                                size={10}
+                                color="#a5b4fc"
+                                style={{ animation: 'spin 1s linear infinite' }}
+                              />
+                              <span style={{ fontSize: '0.65rem', color: '#a5b4fc' }}>Syncing...</span>
+                            </>
+                          ) : (
+                            <>
+                              <CheckCircle2 size={10} color="#34d399" />
+                              <span style={{ fontSize: '0.65rem', color: '#34d399' }}>Cloud Synced</span>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </SignedIn>
+                  <SignedOut>
+                    <SignInButton mode="modal">
+                      <button
+                        className="btn btn-primary"
+                        style={{
+                          padding: '0.42rem 0.85rem',
+                          fontSize: '0.8rem',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.4rem',
+                          background: 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)',
+                          boxShadow: '0 2px 10px rgba(99, 102, 241, 0.35)',
+                        }}
+                        title="Sign in with Clerk to persist your outreach tracker, notes, and stars across devices"
+                      >
+                        <LogIn size={14} />
+                        <span>Sign In</span>
+                      </button>
+                    </SignInButton>
+                  </SignedOut>
+                </>
+              ) : (
+                <div
+                  style={{
+                    fontSize: '0.725rem',
+                    color: 'var(--text-muted)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    padding: '0.35rem 0.6rem',
+                    background: 'rgba(255, 255, 255, 0.04)',
+                    borderRadius: 'var(--radius-md)',
+                    border: '1px dashed rgba(255, 255, 255, 0.15)',
+                  }}
+                  title="Add NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY to enable multi-device user login"
+                >
+                  <User size={13} color="var(--text-muted)" />
+                  <span>Guest Mode (Local)</span>
+                </div>
+              )}
+            </div>
           </div>
         </div>
 

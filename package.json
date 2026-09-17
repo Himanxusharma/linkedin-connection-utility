@@ -9,6 +9,7 @@
     "ingest": "tsx scripts/ingest.ts"
   },
   "dependencies": {
+    "@clerk/nextjs": "^7.9.4",
     "firebase": "^11.4.0",
     "lucide-react": "^1.16.0",
     "next": "^15.2.1",

@@ -4,10 +4,11 @@ import {
   collection,
   doc,
   getDocs,
+  getDoc,
   setDoc,
   Firestore,
 } from 'firebase/firestore';
-import { CompanyRecord } from '../types/company';
+import { CompanyRecord, UserOutreachData } from '../types/company';
 import seedCompaniesRaw from '../data/seed-companies.json';
 
 const seedCompanies: CompanyRecord[] = seedCompaniesRaw as CompanyRecord[];
@@ -114,3 +115,62 @@ export async function saveCompany(
 export function getSeedCompanies(): CompanyRecord[] {
   return seedCompanies;
 }
+
+export const isClerkConfigured = (): boolean => {
+  return Boolean(process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY);
+};
+
+/**
+ * Loads a user's persistent profile data (outreach statuses, notes, starred companies, custom additions)
+ * from Cloud Firestore `users/{userId}`.
+ */
+export async function getUserData(userId: string): Promise<UserOutreachData | null> {
+  if (!db || !isFirebaseConfigured() || !userId) {
+    return null;
+  }
+  try {
+    const userDocRef = doc(db, 'users', userId);
+    const userSnap = await getDoc(userDocRef);
+    if (userSnap.exists()) {
+      return userSnap.data() as UserOutreachData;
+    }
+    return null;
+  } catch (err) {
+    console.warn('Could not fetch user data from Firestore:', err);
+    return null;
+  }
+}
+
+/**
+ * Persists a user's outreach state, personal notes, starred companies, and custom additions
+ * directly to Cloud Firestore `users/{userId}`.
+ */
+export async function saveUserData(
+  userId: string,
+  data: Partial<UserOutreachData>
+): Promise<{ success: boolean; cloudSaved: boolean }> {
+  if (!userId) {
+    return { success: false, cloudSaved: false };
+  }
+
+  if (db && isFirebaseConfigured()) {
+    try {
+      const userDocRef = doc(db, 'users', userId);
+      await setDoc(
+        userDocRef,
+        {
+          ...data,
+          updatedAt: new Date().toISOString(),
+        },
+        { merge: true }
+      );
+      return { success: true, cloudSaved: true };
+    } catch (err) {
+      console.error('Failed to persist user data to Firestore:', err);
+      return { success: false, cloudSaved: false };
+    }
+  }
+
+  return { success: true, cloudSaved: false };
+}
+

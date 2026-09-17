@@ -46,3 +46,14 @@ export interface TargetRoleOption {
   label: string;
   keyword: string;
 }
+
+export interface UserOutreachData {
+  outreachMap?: Record<string, OutreachStatus>;
+  notesMap?: Record<string, string>;
+  starredSet?: string[];
+  customCompanies?: CompanyRecord[];
+  updatedAt?: string;
+  userEmail?: string;
+  userName?: string;
+}
+

@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { Plus_Jakarta_Sans, JetBrains_Mono } from 'next/font/google';
+import { ClerkProvider } from '@clerk/nextjs';
 import './globals.css';
 
 const plusJakartaSans = Plus_Jakarta_Sans({
@@ -28,16 +29,27 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={`${plusJakartaSans.variable} ${jetbrainsMono.variable}`}>
-      <head>
-        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-      </head>
-      <body>
-        <a href="#main-content" className="skip-link">
-          Skip to main content
-        </a>
-        {children}
-      </body>
-    </html>
+    <ClerkProvider
+      appearance={{
+        variables: {
+          colorPrimary: '#6366f1',
+          colorBackground: '#0f172a',
+          borderRadius: '0.5rem',
+        },
+      }}
+    >
+      <html lang="en" className={`${plusJakartaSans.variable} ${jetbrainsMono.variable}`}>
+        <head>
+          <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        </head>
+        <body>
+          <a href="#main-content" className="skip-link">
+            Skip to main content
+          </a>
+          {children}
+        </body>
+      </html>
+    </ClerkProvider>
   );
 }
+

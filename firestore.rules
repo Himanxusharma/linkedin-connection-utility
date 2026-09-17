@@ -8,5 +8,10 @@ service cloud.firestore {
                             && request.resource.data.slug is string;
       allow delete: if false; // protect directory from accidental deletions
     }
+
+    // Per-user outreach tracking, notes, starred companies, and custom companies
+    match /users/{userId} {
+      allow read, write: if true; // Scoped by unique user ID
+    }
   }
 }

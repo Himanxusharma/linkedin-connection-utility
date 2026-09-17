@@ -21,12 +21,17 @@ export const FirebaseModal: React.FC<FirebaseModalProps> = ({
 
   const isConfigured = isFirebaseConfigured();
 
-  const envSnippet = `NEXT_PUBLIC_FIREBASE_API_KEY=your-api-key
+  const envSnippet = `# Firebase Firestore Configuration (Optional)
+NEXT_PUBLIC_FIREBASE_API_KEY=your-api-key
 NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=your-app.firebaseapp.com
 NEXT_PUBLIC_FIREBASE_PROJECT_ID=your-project-id
 NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=your-app.appspot.com
 NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=your-sender-id
-NEXT_PUBLIC_FIREBASE_APP_ID=your-app-id`;
+NEXT_PUBLIC_FIREBASE_APP_ID=your-app-id
+
+# Clerk Authentication (Optional / Cross-Device Persistence)
+NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_...
+CLERK_SECRET_KEY=sk_test_...`;
 
   const copyEnvSnippet = async () => {
     try {
